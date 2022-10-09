@@ -15,14 +15,19 @@ const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       Root: {
         screens: {
-          TabOne: {
+          MarketPlace: {
             screens: {
-              TabOneScreen: 'one',
+              MarketPlaceScreen: 'one',
             },
           },
-          TabTwo: {
+          MintNFT: {
             screens: {
-              TabTwoScreen: 'two',
+              MintNFTScreen: 'two',
+            },
+          },
+          MyNFT: {
+            screens: {
+              MyNFTScreen: 'three',
             },
           },
         },
