@@ -1,7 +1,7 @@
 import { FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Image } from 'react-native';
 
 import { db } from '../db-config';
-import { getDocs, collection } from 'firebase/firestore';
+import { getDocs, collection, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 
@@ -12,11 +12,12 @@ export default function MarketPlaceScreen() {
   useEffect(() => {
 
     const getAllInfo = async() => {
-      const querySnapshot = await getDocs(collection(db, "NFT"));
+      const q = query(collection(db, "NFT"), where("marketplace_metadata.isListed", "==", true));
+      const querySnapshot = await getDocs(q);
       const document = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data()
-        data.marketplace_metadata.isListed && document.push(data)
+        document.push(data)
       })
       setNFTs(document);
     }

@@ -4,7 +4,7 @@ import { StyleSheet, Image, Dimensions, TouchableOpacity, Alert} from 'react-nat
 import { db } from '../db-config';
 import { Text, View } from '../components/Themed';
 import { RootTabScreenProps } from '../types';
-import { doc, Timestamp, updateDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, Timestamp, updateDoc, getDocs, collection, query, where } from 'firebase/firestore';
 
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
 
@@ -89,11 +89,15 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		}
 
 		const getAllInfo = async() => {
+			const q = query(collection(db, "NFT"), 
+				where("nft_metadata.current_owner_address", "==", currentWalletAddress),
+				where("nft_metadata.original_owner_address", "==", currentWalletAddress)
+				)
 			const querySnapshot = await getDocs(collection(db, "NFT"));
 			const document = [];
 			querySnapshot.forEach((doc) => {
 				const data = doc.data()
-				isUsersNFT(data) && document.push(data)
+				document.push(data)
 			})
 			setNFT(document);
 		}
@@ -663,10 +667,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		const marketplace = item.marketplace_metadata
 		const nft = item.nft_metadata
 		if (marketplace.isListed) { // if is listed
-			if(nft.original_owner_address.toLowerCase() == currentWalletAddress.toLowerCase() ||
-				nft.current_owner_address.toLowerCase() == currentWalletAddress.toLowerCase()) { // either original owner or not original owner
 				return 'listed'
-			}
 		} else { // if not listed
 			if (nft.original_owner_address.toLowerCase() == nft.current_owner_address.toLowerCase()) { // Owner is same as minter
 				return 'minted'
@@ -677,8 +678,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					return 'bought'
 			}
 		}
-		// If getStatus('') tak settle lagi
-		return 'loading'
 	}
 
 	const cardMainBody = (item: any) => {
@@ -732,11 +731,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				{ getStatus(item) == "sold" && SoldComponent(item)}
 			</View>
 		)
-	}
-
-	const isUsersNFT = (url: any) => {
-		return url.nft_metadata.original_owner_address.toLowerCase().includes(currentWalletAddress.toLowerCase()) ||
-		url.nft_metadata.current_owner_address.toLowerCase().includes(currentWalletAddress.toLowerCase())
 	}
 
 	const nftSoldToSomeoneElse = (url: any) => {
