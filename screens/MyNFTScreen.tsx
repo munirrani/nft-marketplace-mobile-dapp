@@ -30,10 +30,11 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	const [doneListing, setDoneListing] = useState(false);
 
 	// Wallet
-	const [isStartingTransaction, setIsStartingTransaction] = useState(false);
+	const [isWalletConnected, setIsWalletConnected] = useState(false);
 	const [signer, setSigner] = useState(null)
 	const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('')
 	const [gasPrice, setGasPrice] = useState(null)
+	const [isStartingTransaction, setIsStartingTransaction] = useState(false);
 	const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false);
 
 	// Status - Minted
@@ -99,8 +100,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 		getAllInfo()
 		setup()
+		setIsWalletConnected(walletConnector.connected)
 
-	}, [currentWalletAddress, isStartingTransaction, isSubmittingTransaction, doneListing, inPriceEditMode, 
+	}, [isWalletConnected, currentWalletAddress, isStartingTransaction, isSubmittingTransaction, doneListing, inPriceEditMode, 
 		doneUpdateListing, doneCancelListing, listingTxHash, updateListingTxHash, cancelListingTxHash, withdrawSalesTxHash])
 
 	const listInMarketPlace = async(tokenId: number, gasPrice: BigNumber, signer: any) => {
@@ -649,6 +651,11 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			text: "Sold",
 			capsuleStyle:{backgroundColor: "#ffdee6", borderColor: "#bd7d8c"},
 			textStyle: {color: '#873b4d'}
+		},
+		loading: {
+			text: "Loading...",
+			capsuleStyle:{backgroundColor: "#ededed", borderColor: "#bfbdbe"},
+			textStyle: {color: '#858585'},
 		}
 	}
 
@@ -670,9 +677,8 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					return 'bought'
 			}
 		}
-		// console.log("ERROR")
-		// return '' // something is wrong with state management
-		return 'minted'
+		// If getStatus('') tak settle lagi
+		return 'loading'
 	}
 
 	const cardMainBody = (item: any) => {
@@ -756,8 +762,8 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 	return (
 		<View style={styles.container}>
-			{ !walletConnector.connected && <Text style={{fontSize:21, color: '#BBBBBB' }}>Wallet not Connected</Text>}
-			{ walletConnector.connected && renderPage()}
+			{ !isWalletConnected && <Text style={{fontSize:21, color: '#BBBBBB' }}>Wallet not Connected</Text>}
+			{ isWalletConnected && renderPage()}
 		</View>
 	);
 }
