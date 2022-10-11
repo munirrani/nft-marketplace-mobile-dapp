@@ -13,7 +13,7 @@ import { Button, ColorSchemeName, Pressable } from 'react-native';
 import Colors from '../constants/Colors';
 import useColorScheme from '../hooks/useColorScheme';
 import ModalScreen from '../screens/ModalScreen';
-import NotFoundScreen from '../screens/NotFoundScreen';
+import NFTDetailsScreen from '../screens/NFTDetailsScreen';
 import MarketPlaceScreen from '../screens/MarketPlaceScreen';
 import MintNFTScreen from '../screens/MintNFTScreen';
 import MyNFTScreen from '../screens/MyNFTScreen';
@@ -42,9 +42,11 @@ function RootNavigator() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="Root" component={BottomTabNavigator} options={{ headerShown: false, }} />
-      <Stack.Screen name="NotFound" component={NotFoundScreen} options={{ title: 'Oops!' }} />
+      <Stack.Screen name="NFTDetails" component={NFTDetailsScreen} options={
+        ({ navigation }) => ({ headerShown: false, animation: 'slide_from_right' })
+        } />
       <Stack.Group screenOptions={{ presentation: 'modal' }}>
-        <Stack.Screen name="Modal" component={ModalScreen} />
+        <Stack.Screen name="Modal" component={ModalScreen}/>
       </Stack.Group>
     </Stack.Navigator>
   );
@@ -86,12 +88,8 @@ function BottomTabNavigator() {
         name="MarketPlace"
         component={MarketPlaceScreen}
         options={({ navigation }: RootTabScreenProps<'MarketPlace'>) => ({
-          title: 'Marketplace',
-          headerTitleStyle: {
-            fontSize: 25,
-          },
           tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-          headerRight: () => <WalletLoginButton />,
+          headerShown: false,
         })}
       />
       <BottomTab.Screen

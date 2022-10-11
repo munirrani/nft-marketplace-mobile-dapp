@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StyleSheet, Image, Dimensions, TouchableOpacity, Alert} from 'react-native';
+import React, { useCallback, useContext, useEffect, useRef, useState, } from 'react';
+import { StyleSheet, Image, Dimensions, Alert, AppState, Linking, PermissionsAndroid,} from 'react-native';
 
 import { db } from '../db-config';
 import { Text, View } from '../components/Themed';
@@ -18,6 +18,10 @@ import {AccordionList} from 'react-native-accordion-list-view';
 import CapsuleTextBar from '../components/CapsuleTextBar';
 import Button from '../components/Button';
 import { INFURA_ID } from '@env';
+import { useFocusEffect } from '@react-navigation/native';
+import { Web3ContextProvider } from '../util/Web3ContextProvider';
+import WalletLoginButton from '../components/WalletLoginButton';
+import { downloadFileFromUri, openDownloadedFile } from 'expo-downloads-manager';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const MarketplaceSmartContractAddress = '0x1DaEFC61Ef1d94ce351841Bde660F582D7c060Db'
@@ -42,7 +46,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	
 	// Status - Listed
 	const [inPriceEditMode, setInPriceEditMode] = useState(false)
-	const [priceText, setOnChangePriceText] = useState("")
+	const [changePriceText, setOnChangePriceText] = useState("")
 
 	const [doneUpdateListing, setDoneUpdateListing] = useState(false)
 	const [updateListingTxHash, setUpdateListingTxHash] = useState<string>('')
@@ -57,57 +61,105 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	const [withdrawSalesTxHash, setWithdrawSalesTxHash] = useState<string>('')
 	
 	const walletConnector = useWalletConnect();
+	
+	// TODO: METHOD TO REFRESH
 
-	useEffect(()=> {
-		const setup = async() => {
-			const provider = new WalletConnectProvider({
-				infuraId: INFURA_ID,
-				connector: walletConnector
-			});
-			await provider.enable()
-		
-			const web3Provider = new providers.Web3Provider(provider);
-			const signer = web3Provider.getSigner();
-			setSigner(signer)
-		
-			provider.on("accountsChanged", (accounts: string[]) => {
-				console.log(accounts);
-			});
-		
-			provider.on("chainChanged", (chainId: number) => {
-				console.log(chainId);
-			});
-		
-			provider.on("disconnect", (code: number, reason: string) => {
-				setCurrentWalletAddress("")
-				console.log(code, reason);
-			});
-			
-			const gasPrice = await web3Provider.getGasPrice()
-			setGasPrice(gasPrice)
-			setCurrentWalletAddress(walletConnector.accounts[0])
-		}
+	// TODO: WAY TO DISPLAY (NO NFT) TEXT WHEN THERE IS NO NFT CORRESPONDING TO USER
+	
+	const getAllInfo = async() => {
+		const document = [];
 
-		const getAllInfo = async() => {
-			const q = query(collection(db, "NFT"), 
-				where("nft_metadata.current_owner_address", "==", currentWalletAddress),
-				where("nft_metadata.original_owner_address", "==", currentWalletAddress)
-				)
-			const querySnapshot = await getDocs(collection(db, "NFT"));
-			const document = [];
-			querySnapshot.forEach((doc) => {
-				const data = doc.data()
-				document.push(data)
-			})
-			setNFT(document);
-		}
+		const q = query(collection(db, "NFT"),			
+			where("nft_metadata.original_owner_address", "==", walletConnector.accounts[0].toLowerCase())
+		)
+		const querySnapshot = await getDocs(q);
+		querySnapshot.forEach((doc) => {
+			const data = doc.data()
+			document.push(data)
+		})
 
-		getAllInfo()
-		setup()
-		setIsWalletConnected(walletConnector.connected)
+		const document2 = [];
+		const q2 = query(collection(db, "NFT"), 
+			where("nft_metadata.current_owner_address", "==", walletConnector.accounts[0].toLowerCase()),
+		)
+		const querySnapshot2 = await getDocs(q2);
+		querySnapshot2.forEach((doc) => {
+			const data = doc.data()
+			document2.push(data)
+		})
 
-	}, [isWalletConnected, currentWalletAddress, isStartingTransaction, isSubmittingTransaction, doneListing, inPriceEditMode, 
-		doneUpdateListing, doneCancelListing, listingTxHash, updateListingTxHash, cancelListingTxHash, withdrawSalesTxHash])
+		const NFTs = new Set(document.map(d => d.nft_metadata.token_id))
+		const arrayMerged = [...document, ...document2.filter(d => !NFTs.has(d.nft_metadata.token_id))]
+
+		setNFT(arrayMerged);
+	}
+	
+	const setup = async() => {	
+
+		const provider = new WalletConnectProvider({
+			infuraId: INFURA_ID,
+			connector: walletConnector
+		});
+
+		const web3Provider = new providers.Web3Provider(provider);
+		const signer = web3Provider.getSigner();
+		setSigner(signer)
+		
+		provider.on("accountsChanged", async (accounts: string[]) => {
+			console.log("accountsChanged listener")
+			setIsWalletConnected(true)
+			setCurrentWalletAddress(accounts[0])
+		});
+		
+		provider.on("chainChanged", (chainId: number) => {
+			console.log("Using chainId", chainId)
+		});
+		
+		provider.on("disconnect", async (code: number, reason: string) => {
+			console.log("disconnect listener")
+			setCurrentWalletAddress("")
+			setIsWalletConnected(false)
+			setNFT([])
+			console.log(code, reason);
+		});
+		await provider.enable()
+		
+		const gasPrice = await web3Provider.getGasPrice()
+		setGasPrice(gasPrice)
+	}
+
+	const checkWalletStatus = async() => {	
+		const isConnected = walletConnector.connected
+		const account = walletConnector.accounts[0]
+		setIsWalletConnected(isConnected)
+		setCurrentWalletAddress(isConnected ? account : "")
+		isConnected && await getAllInfo()
+		!isConnected && setNFT([])
+	}
+
+	useEffect(() => {
+		checkWalletStatus()
+
+		navigation.setOptions({
+			headerRight: () => (
+				<WalletLoginButton customOnPress={()=> {
+					if (isWalletConnected)  {
+						console.log("Wallet connected, so disconnecting wallet")
+						setNFT([])
+						walletConnector.killSession()
+						setIsWalletConnected(false)
+					} else {
+						console.log("Wallet unconnected, so connecting wallet")
+						walletConnector.connect()
+						setIsWalletConnected(true)
+					}
+				}} />
+			)
+		})
+	  }, [navigation, isWalletConnected]);
+
+	// }, [isWalletConnected, currentWalletAddress, isStartingTransaction, isSubmittingTransaction, doneListing, inPriceEditMode, 
+	// 	doneUpdateListing, doneCancelListing, listingTxHash, updateListingTxHash, cancelListingTxHash, withdrawSalesTxHash])
 
 	const listInMarketPlace = async(tokenId: number, gasPrice: BigNumber, signer: any) => {
 		console.log("List in marketplace", "with tokenId", tokenId, "...")
@@ -149,6 +201,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			setDoneListing(false)
 		  }, 3000);
 		} catch (error) {
+			setIsStartingTransaction(false)
+			setIsSubmittingTransaction(false)
+			setDoneListing(false)
 			Alert.alert("Error", error.toString(),
 			[
 				{ text: "Ok", style: "default", },
@@ -201,15 +256,18 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				setDoneCancelListing(false)
 			  }, 3000);
 		
-		  } catch (error) {
-			  Alert.alert("Error", error.toString(),
-			  [
-				  { text: "Ok", style: "default", },
-			  ],
-				  { cancelable: true, }
-			  );
+		} catch (error) {
+			setIsStartingTransaction(false)
+			setIsSubmittingTransaction(false)
+			setDoneCancelListing(false)
+			Alert.alert("Error", error.toString(),
+			[
+				{ text: "Ok", style: "default", },
+			],
+				{ cancelable: true, }
+			);
 			console.log(error)
-		  }
+		}
 	}
 	
 	const updateListing = async(tokenId: number, price: string) => {
@@ -252,17 +310,20 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				setDoneUpdateListing(false)
 				setInPriceEditMode(false) // close edit mode
 			}, 3000);
-
 		
-		  } catch (error) {
-			  Alert.alert("Error", error.toString(),
-			  [
-				  { text: "Ok", style: "default", },
-			  ],
-				  { cancelable: true, }
-			  );
+		} catch (error) {
+			setIsStartingTransaction(false)
+			setIsSubmittingTransaction(false)
+			setDoneUpdateListing(false)
+			setInPriceEditMode(false)
+			Alert.alert("Error", error.toString(),
+			[
+				{ text: "Ok", style: "default", },
+			],
+				{ cancelable: true, }
+			);
 			console.log(error)
-		  }
+		}
 	}
 
 	const getProceeds = async() => {
@@ -271,17 +332,19 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		try {
 		  const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
 		  const call = await MarketPlaceContract.getProceeds(currentWalletAddress)
-		  setIsSalesAvailable(parseInt(call._hex) != 0)
-		  if (parseInt(call._hex) != 0) {
-			const message = "There are " + utils.formatEther(parseInt(call._hex)) + " ETH available to be withdrawn!"
+		  const isAvailable = call.toString() != "0"
+		  setIsSalesAvailable(isAvailable)
+		  if (isAvailable) {
+			const message = "There are " + utils.formatEther(call.toString()) + " ETH available to be withdrawn! Tap on \"Withdraw sales\" to withdraw"
 			console.log(message)
-		  	Alert.alert("", message,
+		  	Alert.alert("Information", message,
 			[
 				{ text: "Ok", style: "default", },
 			],
 				{ cancelable: true, }
 			);
 		  } else {
+			setIsSalesAvailable(false)
 			const message = "It is already withdrawn"
 			console.log(message)
 			Alert.alert("", message,
@@ -321,29 +384,15 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		  .then((result: any) => {
 			console.log("Sales TX Result");
 			console.log(result)
-			if (result.events[0].transactionHash) {
-				setWithdrawSalesTxHash(result.events[0].transactionHash)
-				// withdrawSalesTxHash = result.events[0].transactionHash;
-				setIsSubmittingTransaction(false)
-				setDoneWithdrawSales(true)
-			} else {
-				Alert.alert("Error", "Sales is already withdrawn",
-				[
-					{
-						text: "Ok",
-						style: "default",
-					},
-				],
-				{
-					cancelable: true,
-				}
-				);	
-				setDoneWithdrawSales(false)
-				setIsStartingTransaction(false)
-				setIsSubmittingTransaction(false)
-			}
+			setWithdrawSalesTxHash(result.transactionHash)
+			// withdrawSalesTxHash = result.events[0].transactionHash;
+			setIsSubmittingTransaction(false)
+			setDoneWithdrawSales(true)
 		  })
 		} catch (error) {
+			setIsStartingTransaction(false)
+			setIsSubmittingTransaction(false)
+			setDoneWithdrawSales(false)
 			Alert.alert("Error", error.toString(),
 			[
 				{ text: "Ok", style: "default", },
@@ -362,23 +411,27 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	*	
 	*/
 
-	const AddressText = (props: any) => 
-	<View style={[{flexDirection: 'row'}, props.style]}>
-		{	currentWalletAddress.toLowerCase() === props.text.toLowerCase() &&
-			<Image 
-				source={require('../assets/images/circle_green_checkmark.png')} 
-				style={{
-					width: 15,
-					height: 15,
-					marginRight: 5,
-					marginTop: 2,
-				}}
-			/>
-		}
-		<View style={{flex:1}}>
-			<Text style={[{},props.textStyle]}>{props.text}</Text>
-		</View>
-	</View>
+	const AddressText = (props: any) => {
+		const isUsersAddress = currentWalletAddress.toLowerCase() === props.text.toLowerCase()
+		return (
+			<View style={[{flexDirection: 'row'}, props.style]}>
+				{ isUsersAddress &&
+					<Image 
+						source={require('../assets/images/circle_green_checkmark.png')} 
+						style={{
+							width: 15,
+							height: 15,
+							marginRight: 5,
+							marginTop: 2,
+						}}
+					/>
+				}
+				<View style={{flex:1}}>
+					<Text style={[{},props.textStyle]}>{props.text}</Text>
+				</View>
+			</View>
+		)
+	}
 
 	const MintedComponent = ({item}) => 
 		<View>
@@ -395,7 +448,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					onChangeText={onChangePriceInEtherText}
 					value={priceInEtherText}
 					style={{
-						fontSize: 12,
+						fontSize: 14,
 						borderWidth: 1,
 						borderRadius: 5,
 						borderColor: "#DDDDDD",
@@ -456,7 +509,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					inPriceEditMode ? 
 					<AutoGrowingTextInput 
 						onChangeText={setOnChangePriceText}
-						value={priceText}
+						value={changePriceText}
 						style={{
 							fontSize: 14,
 							borderWidth: 1,
@@ -491,7 +544,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			-> Two buttons at the bottom change text (cancel & confirm) ✅
 	3. Cancel listing (alert for confirmation) ✅
 	4. StatusMessage at the bottom showing transaction status. ✅
-	5. Update to firebase 🚧
+	5. Update to firebase ✅
 	
 	Put two buttons side-to-side (update price & cancel) at the bottom
 	*/
@@ -508,7 +561,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 							setOnChangePriceText(item.marketplace_metadata.listing_price)
 						} else {
 							setInPriceEditMode(false)
+							// TODO A METHOD TO CLEAR SCREEN AFTER TX SETTLES
 							setIsStartingTransaction(false)
+							setIsSubmittingTransaction(false)
 							setDoneUpdateListing(false)
 						}
 					}}
@@ -528,13 +583,13 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 							)
 						} else {
 							// Confirm price
-							if (priceText == item.marketplace_metadata.listing_price) {
+							if (changePriceText == item.marketplace_metadata.listing_price) {
 								console.log("Woi harga sama")
 							} else {
-								promptUser(priceText + " ETH" + "\n\nConfirm price?", 
+								promptUser(changePriceText + " ETH" + "\n\nConfirm price?", 
 									() => {
 										setIsStartingTransaction(true)
-										updateListing(item.nft_metadata.token_id, priceText)
+										updateListing(item.nft_metadata.token_id, changePriceText)
 									}
 								)
 							}
@@ -581,10 +636,14 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	*/
 	const SoldComponent = (item) => 
 		<View>
-			<View style={{marginTop: 10, justifyContent: 'space-between', alignItems: 'stretch'}}>
+			<View style={{justifyContent: 'space-between', alignItems: 'stretch'}}>
+				<Text style={{marginTop: 20, marginBottom: 15, alignSelf: 'center', color: "#4989ad"}}
+					onPress={() => Linking.openURL("https://goerli.etherscan.io/token/" + NFTSmartContractAddress + "?a=" + item.nft_metadata.token_id)}>
+					View exchange history in Etherscan
+				</Text>
 				<Button 
 					title={"Check withdraw availability"}
-					style={{flex: 2, backgroundColor: "#333333"}}
+					style={{marginTop: 10, flex: 2, backgroundColor: "#333333"}}
 					textStyle={{fontSize: 12, color: 'white'}}
 					onPress={() => {
 						getProceeds()
@@ -626,13 +685,30 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				}
 			</View>
 		</View>
-	
-	/* 
-		Add text at the last part (before sell function row) to show transaction history in Etherscan
-	*/
-	const BoughtComponent = (item) => 
-		<View>
-			
+
+	const downloadAndOpenFile = async(uri: string, fileName: string) => {
+		const { status, error } = await downloadFileFromUri(
+			uri,
+			fileName + ".jpg",		
+		);
+		await openDownloadedFile(fileName + ".jpg")
+		console.log("status", status, error)
+	}
+
+	const BoughtComponent = ({item}) =>
+		<View style={{width: '100%', marginTop: 10, alignItems: 'center', justifyContent: 'center'}}>
+			<Button 
+				title={"Download image from IPFS"}
+				style={{width: '100%', backgroundColor: 'green'}}
+				textStyle={{color: 'white'}}
+				onPress={() => downloadAndOpenFile(item.nft_metadata.ipfs_image_url, item.nft_metadata.image_name)}
+			/>
+			<View style={{marginTop: 20, marginBottom: 10}}>
+				<Text style={{color: "#4989ad"}}
+					onPress={() => Linking.openURL("https://goerli.etherscan.io/token/" + NFTSmartContractAddress + "?a=" + item.nft_metadata.token_id)}>
+					View exchange history in Etherscan
+				</Text>
+			</View>
 		</View>
 
 	const capsuleTextBarStyles = {
@@ -672,7 +748,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			if (nft.original_owner_address.toLowerCase() == nft.current_owner_address.toLowerCase()) { // Owner is same as minter
 				return 'minted'
 			} else { // Owner and current owner are different, exchange have took place
-				if(nft.original_owner_address.toLowerCase() == currentWalletAddress.toLowerCase()) 
+				if(nft.current_owner_address.toLowerCase() != currentWalletAddress.toLowerCase()) 
 					return 'sold'
 				else
 					return 'bought'
@@ -724,7 +800,12 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					<AddressText style={{marginTop: 10}} text={item.nft_metadata.original_owner_address} />
 				</>
 				}
-				{ (getStatus(item) == "minted" || getStatus(item) == 'bought') &&
+				{ getStatus(item) == "bought" && <>
+					<BoughtComponent item={item} />
+					<MintedComponent item={item} />
+				</>
+				}
+				{ getStatus(item) == "minted" &&
 					<MintedComponent item={item} />
 				}
 				{ getStatus(item) == "listed" && ListingEditComponent(item) }
@@ -737,28 +818,28 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		return url.nft_metadata.original_owner_address.toLowerCase() != url.nft_metadata.current_owner_address.toLowerCase()
 	}
 
-	const renderPage = () => {
-
-		return (
-			<View style={{flex: 1, marginTop: 15, width: Dimensions.get('window').width - 30}}>
-				<AccordionList
-					containerItemStyle = {{shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: {height: 2,width:0},
+	return (<>
+			{ !isWalletConnected && 
+				<View style={{flex:1, justifyContent: 'center', alignItems: 'center'}}>
+					<Text style={{fontSize:21, color: '#BBBBBB', }}>Wallet not Connected</Text>
+					<Text style={{marginTop: 10, fontSize: 14, color: "#82bee0"}} onPress={checkWalletStatus}>Refresh</Text>
+				</View>
+			}
+			{ isWalletConnected && 
+				<View style={{flex: 1, padding: 15}}>
+					<AccordionList
+						keyboardShouldPersistTaps="handled"
+						containerItemStyle = {{shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: {height: 2,width:0},
 						borderRadius: 6, borderWidth: 1.5, borderColor:'#eeeeee'
 					}}
-                    data={NFT}
-                    customTitle={item => cardMainBody(item)}
-                    customBody={item => cardExpandedBody(item)}
-                    animationDuration={300}
-                />
-			</View>
-		)
-	}
-
-	return (
-		<View style={styles.container}>
-			{ !isWalletConnected && <Text style={{fontSize:21, color: '#BBBBBB' }}>Wallet not Connected</Text>}
-			{ isWalletConnected && renderPage()}
-		</View>
+					data={NFT}
+					customTitle={item => cardMainBody(item)}
+					customBody={item => cardExpandedBody(item)}
+					animationDuration={300}
+					/>
+				</View>
+			}
+			</>
 	);
 }
 

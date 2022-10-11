@@ -20,7 +20,7 @@ export default function MintNFTScreen() {
 
 	// Wallet
 	const [isWalletConnected, setIsWalletConnected] = useState(false);
-	const [isStartingTransaction, setIsStartingTransaction] = useState(false);
+	const [isStartingTransaction, setIsStartingMinting] = useState(false);
 	const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false);
 
     const [nameText, onChangeNameText] = useState<string>('');
@@ -84,6 +84,7 @@ export default function MintNFTScreen() {
 			ipfsImageURL = data.ipfs_url
 			setDoneUploadImage(true)
 	  } catch (error) {
+			setIsStartingMinting(false)
 		Alert.alert("Error", error.toString(),
 		[
 			{
@@ -125,6 +126,8 @@ export default function MintNFTScreen() {
 			ipfsMetadataURL = data.metadata_uri
 			setDoneUploadMetadata(true)
 		} catch (error) {
+			setIsStartingMinting(false)
+			setDoneUploadImage(false)
 			Alert.alert("Error", error.toString(),
 			[
 				{
@@ -163,6 +166,10 @@ export default function MintNFTScreen() {
 			setDoneMinting(true)
         })
       } catch (error) {
+		setIsStartingMinting(false)
+		setDoneUploadImage(false)
+		setDoneUploadMetadata(false)
+		setIsSubmittingTransaction(false)
 		Alert.alert("Error", error.toString(),
 		[
 			{ text: "Ok", style: "default", },
@@ -186,7 +193,7 @@ export default function MintNFTScreen() {
 				isListed: false,
 			},
 			nft_metadata: {
-				current_owner_address: address,
+				current_owner_address: address.toLowerCase(),
 				description: descriptionText,
 				external_url: externalURLText ? externalURLText : "",
 				image_name: nameText,
@@ -194,7 +201,7 @@ export default function MintNFTScreen() {
 				ipfs_metadata_uri: ipfsMetadataURL,
 				mint_transaction_hash: mintTxHash,
 				minted_date: time,
-				original_owner_address: address,
+				original_owner_address: address.toLowerCase(),
 				token_id: tokenId,
 			},
 		}
@@ -257,7 +264,7 @@ export default function MintNFTScreen() {
 			return false
 		}
 
-		if (externalURLText && !isValidHttpUrl(externalURLText)) {
+		if (!!externalURLText && !isValidHttpUrl(externalURLText)) {
 			Alert.alert("Error", "In valid URL format",
 			[
 				{
@@ -316,7 +323,7 @@ export default function MintNFTScreen() {
 
 	const clearScreen = () => {
 		// If done minting, give option to clear screen
-		setIsStartingTransaction(false)
+		setIsStartingMinting(false)
 		setIsSubmittingTransaction(false)
 		onChangeNameText('')
 		onChangeDescriptionText('')
@@ -332,7 +339,7 @@ export default function MintNFTScreen() {
         <View style={styles.container}>
           <View style={{ margin:10 }}>
             <View style={{alignItems: 'center'}}>
-              {imageResponse && (
+              {!!imageResponse ?
 				<ImageBackground 
 					source={{uri: imageResponse.uri}}
 					style={{
@@ -349,10 +356,15 @@ export default function MintNFTScreen() {
 						/>
 					</TouchableOpacity>
 				</ImageBackground>
-              )}
+			  		:
+				<View style={{height: 200, width: '100%', marginBottom: 15, alignItems: 'center', justifyContent: 'center'}}>
+					<Text style={{fontSize: 20, color: "#bbbbbb"}}>No Image Selected</Text>
+				</View>
+			  }
               <Button 
-                  onPress={handleImageSelection}
-                  title={"✨ Upload Image ✨"}
+			  	style={{width: '100%'}}
+                onPress={handleImageSelection}
+                title={"Upload Image"}
               />
             </View>
             <View>
@@ -402,16 +414,16 @@ export default function MintNFTScreen() {
 					multiline={false}
 				/>
             </View>
-            <View style={{alignItems: 'center', marginVertical: 10}}>
-				<TouchableOpacity style={{padding: 10, borderRadius: 4, backgroundColor: 'green',}}
-					onPress={() => {
-						const check = doChecks()
-						setIsStartingTransaction(check)
-						check && startMinting()
-					}}>
-					<Text style={{color: 'white'}}>Mint it!</Text>
-				</TouchableOpacity>
-			</View>
+			<Button 
+			  	style={{marginVertical: 10, width: '100%', backgroundColor: 'green',}}
+                onPress={() => {
+					const check = doChecks()
+					setIsStartingMinting(check)
+					check && startMinting()
+				}}
+                title={"Mint it!"}
+				textStyle={{color: 'white', fontWeight: 'bold'}}
+              />
 			<View style={{marginLeft: 10}}>
 				{ isStartingTransaction && 
 					<StatusMessage content="Starting..." />

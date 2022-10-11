@@ -33,7 +33,7 @@ const linking: LinkingOptions<RootStackParamList> = {
         },
       },
       Modal: 'modal',
-      NotFound: '*',
+      NFTDetails: '*',
     },
   },
 };
