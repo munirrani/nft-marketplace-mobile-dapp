@@ -828,7 +828,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			{ isWalletConnected && 
 				<View style={{flex: 1, padding: 15}}>
 					<AccordionList
-						keyboardShouldPersistTaps="handled"
 						containerItemStyle = {{shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: {height: 2,width:0},
 						borderRadius: 6, borderWidth: 1.5, borderColor:'#eeeeee'
 					}}
