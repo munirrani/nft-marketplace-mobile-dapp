@@ -1,7 +1,7 @@
 module.exports = {
   resolver: {
     extraNodeModules: {
-      crypto: ('crypto-browserify'),
+      crypto: require.resolve('crypto-browserify'),
       url: require.resolve('url/'),
       fs: require.resolve('expo-file-system'),
       http: require.resolve('stream-http'),
