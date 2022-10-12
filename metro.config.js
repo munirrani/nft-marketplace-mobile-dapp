@@ -13,6 +13,6 @@ module.exports = {
       stream: require.resolve('readable-stream'),
       vm: require.resolve('vm-browserify'),
     },
+    assetExts: ["cjs"]
   },
-  assetExts: ["cjs"]
 };
