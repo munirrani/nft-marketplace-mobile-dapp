@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "eject": "expo eject",
-    "test": "jest --watchAll"
+    "test": "jest --watchAll",
+    "postinstall": "patch-package"
   },
   "jest": {
     "preset": "jest-expo"
@@ -43,7 +44,9 @@
     "https-browserify": "^1.0.0",
     "node-libs-react-native": "^1.2.1",
     "os-browserify": "^0.3.0",
+    "patch-package": "^6.4.7",
     "path-browserify": "^1.0.1",
+    "postinstall-postinstall": "^2.1.0",
     "react": "17.0.1",
     "react-dom": "17.0.1",
     "react-native": "0.64.3",

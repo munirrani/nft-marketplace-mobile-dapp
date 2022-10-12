@@ -1,0 +1,27 @@
+diff --git a/node_modules/@walletconnect/react-native-dapp/.DS_Store b/node_modules/@walletconnect/react-native-dapp/.DS_Store
+new file mode 100644
+index 0000000..f567c03
+Binary files /dev/null and b/node_modules/@walletconnect/react-native-dapp/.DS_Store differ
+diff --git a/node_modules/@walletconnect/react-native-dapp/dist/.DS_Store b/node_modules/@walletconnect/react-native-dapp/dist/.DS_Store
+new file mode 100644
+index 0000000..7d9319b
+Binary files /dev/null and b/node_modules/@walletconnect/react-native-dapp/dist/.DS_Store differ
+diff --git a/node_modules/@walletconnect/react-native-dapp/dist/providers/WalletConnectProvider.js b/node_modules/@walletconnect/react-native-dapp/dist/providers/WalletConnectProvider.js
+index 9b5b1e2..f4b738c 100644
+--- a/node_modules/@walletconnect/react-native-dapp/dist/providers/WalletConnectProvider.js
++++ b/node_modules/@walletconnect/react-native-dapp/dist/providers/WalletConnectProvider.js
+@@ -22,10 +22,10 @@ export default function WalletConnectProvider({ children, renderQrcodeModal: may
+     const open = React.useCallback(async (uri, cb) => {
+         if (Platform.OS === 'android') {
+             const canOpenURL = await Linking.canOpenURL(uri);
+-            if (!canOpenURL) {
+-                Linking.openURL('https://walletconnect.org/wallets');
+-                throw new Error('No wallets found.');
+-            }
++            // if (!canOpenURL) {
++            //     Linking.openURL('https://walletconnect.org/wallets');
++            //     throw new Error('No wallets found.');
++            // }
+             await Linking.openURL(uri);
+         }
+         setState({
