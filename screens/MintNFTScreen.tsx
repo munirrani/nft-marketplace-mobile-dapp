@@ -5,7 +5,6 @@ import { setDoc, doc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../db-config';
 import {AutoGrowingTextInput} from 'react-native-autogrow-textinput';
 import Button from '../components/Button';
-import * as DocumentPicker from 'expo-document-picker';
 import { BigNumber, Contract, providers } from 'ethers';
 import WalletConnectProvider from '@walletconnect/web3-provider';
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
@@ -27,6 +26,8 @@ export default function MintNFTScreen() {
     const [descriptionText, onChangeDescriptionText] = useState<string>('');
     const [externalURLText, onChangeExternalURLText] = useState<string>('');
     const [imageResponse, setImageResponse] = useState(null);
+	const [imageWidth, setImageWidth] = useState<number>()
+	const [imageHeight, setImageHeight] = useState<number>()
 
 	const [doneUploadImage, setDoneUploadImage] = useState(false);
 	const [doneUploadMetadata, setDoneUploadMetadata] = useState(false);
@@ -53,6 +54,8 @@ export default function MintNFTScreen() {
 		
 		if (!result.cancelled) {
 			setImageResponse(result);
+			setImageWidth(result.width)
+			setImageHeight(result.height)
 		}
 	}
 
@@ -189,6 +192,10 @@ export default function MintNFTScreen() {
 		const address = walletConnector.accounts[0]
 
 		const firebase_data = {
+			image_metadata: {
+				width: imageWidth,
+				height: imageHeight,
+			},
 			marketplace_metadata: {
 				isListed: false,
 			},

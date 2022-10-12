@@ -66,31 +66,8 @@ export default function MarketPlaceScreen({ navigation }) {
     })
   }
 
-  function useImageAspectRatio(imageUrl: string) {
-    const [aspectRatio, setAspectRatio] = useState(1);
-  
-    useEffect(() => {
-      if (!imageUrl) {
-        return;
-      }
-  
-      let isValid = true;
-      Image.getSize(imageUrl, (width, height) => {
-        if (isValid) {
-          setAspectRatio(width / height);
-        }
-      });
-  
-      return () => {
-        isValid = false;
-      };
-    }, [imageUrl]);
-  
-    return aspectRatio;
-  }    
-
   const NFTCardView = (props: any) => {
-    const aspectRatio = useImageAspectRatio(props.imgSource)
+    const aspectRatio = props.imgWidth / props.imgHeight
 
     const isUsersOwnNFT = (address: string) => address.toLowerCase() === walletAddress.toLowerCase()
     return (
@@ -132,6 +109,8 @@ export default function MarketPlaceScreen({ navigation }) {
     return(                
         <NFTCardView  
           imgSource={item.nft_metadata.ipfs_image_url}
+          imgWidth={item.image_metadata.width}
+          imgHeight={item.image_metadata.height}
           name={item.nft_metadata.image_name}
           owner={item.nft_metadata.current_owner_address}
           price={item.marketplace_metadata.listing_price}
@@ -139,7 +118,12 @@ export default function MarketPlaceScreen({ navigation }) {
           navigation={
             () => {
               incrementView(item.nft_metadata.token_id)
-              return navigation.navigate('NFTDetails', { nft_metadata: item.nft_metadata, marketplace_metadata: item.marketplace_metadata, wallet_address: walletAddress })
+              return navigation.navigate('NFTDetails', { 
+                nft_metadata: item.nft_metadata, 
+                marketplace_metadata: item.marketplace_metadata, 
+                image_metadata: item.image_metadata,
+                wallet_address: walletAddress 
+              })
             }
           }
         />

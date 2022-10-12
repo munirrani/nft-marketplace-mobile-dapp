@@ -171,6 +171,12 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	  
 		  return () => {
 			isActive = false;
+			setIsStartingTransaction(false)
+			setIsSubmittingTransaction(false)
+			setDoneCancelListing(false)
+			setDoneListing(false)
+			setDoneUpdateListing(false)
+			setDoneWithdrawSales(false)
 		  };
 		}, [isWalletConnected, currentWalletAddress])
 	  );
@@ -409,6 +415,12 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			// withdrawSalesTxHash = result.events[0].transactionHash;
 			setDoneWithdrawSales(true)
 		  })
+
+		  setTimeout(async () => {
+			setIsStartingTransaction(false)
+			setIsSubmittingTransaction(false)
+			setDoneWithdrawSales(false)
+		}, 3000);
 		} catch (error) {
 			setIsStartingTransaction(false)
 			setIsSubmittingTransaction(false)

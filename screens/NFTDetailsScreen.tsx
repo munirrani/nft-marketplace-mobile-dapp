@@ -27,7 +27,7 @@ const monthNames = ["January", "February", "March", "April", "May", "June",
 
 export default function NFTDetailsScreen({ route, navigation }: RootStackScreenProps<'NFTDetails'>) {
 
-  const { nft_metadata, marketplace_metadata, wallet_address } = route.params;
+  const { nft_metadata, marketplace_metadata, image_metadata, wallet_address } = route.params;
 
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [connectWalletFromThisPage, setConnectWalletFromThisPage] = useState(false);
@@ -129,29 +129,6 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
       };
     }, [isWalletConnected, connectWalletFromThisPage])
   );
-
-  function useImageAspectRatio(imageUrl: string) {
-    const [aspectRatio, setAspectRatio] = useState(1);
-  
-    useEffect(() => {
-      if (!imageUrl) {
-        return;
-      }
-  
-      let isValid = true;
-      Image.getSize(imageUrl, (width, height) => {
-        if (isValid) {
-          setAspectRatio(width / height);
-        }
-      });
-  
-      return () => {
-        isValid = false;
-      };
-    }, [imageUrl]);
-  
-    return aspectRatio;
-  }   
 
   const buyNFT = async () => {
     console.log("Buying NFT tokenId" + nft_metadata.token_id)
@@ -358,7 +335,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
           source={{uri: nft_metadata.ipfs_image_url}}
           style={{
             width: Dimensions.get('window').width,
-            height: Dimensions.get('window').width / useImageAspectRatio(nft_metadata.ipfs_image_url),
+            height: Dimensions.get('window').width / (image_metadata.width / image_metadata.height),
           }}
         />
         <View style={{flex: 1, padding: 20}}>         
