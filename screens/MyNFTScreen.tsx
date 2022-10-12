@@ -1,16 +1,12 @@
 import React, { useCallback, useContext, useEffect, useRef, useState, } from 'react';
-import { StyleSheet, Image, Dimensions, Alert, AppState, Linking, PermissionsAndroid, TextInput, KeyboardAvoidingView,} from 'react-native';
+import { StyleSheet, Image, Dimensions, Alert, Linking, TextInput} from 'react-native';
 
 import { db } from '../db-config';
 import { Text, View } from '../components/Themed';
 import { RootTabScreenProps } from '../types';
 import { doc, Timestamp, updateDoc, getDocs, collection, query, where } from 'firebase/firestore';
-
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
-
 import { providers, utils, Contract } from "ethers";
-
-import { BigNumber } from '@ethersproject/bignumber';
 import WalletConnectProvider from '@walletconnect/web3-provider';
 import StatusMessage from '../components/StatusMessage';
 import {AccordionList} from 'react-native-accordion-list-view';
@@ -18,7 +14,6 @@ import CapsuleTextBar from '../components/CapsuleTextBar';
 import Button from '../components/Button';
 import { INFURA_ID } from '@env';
 import { useFocusEffect } from '@react-navigation/native';
-import { Web3ContextProvider } from '../util/Web3ContextProvider';
 import WalletLoginButton from '../components/WalletLoginButton';
 import { downloadFileFromUri, openDownloadedFile } from 'expo-downloads-manager';
 

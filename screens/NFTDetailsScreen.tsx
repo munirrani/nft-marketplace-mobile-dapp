@@ -427,7 +427,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
               />
               <Button 
                 title={inPriceEditMode ? "Close" : "Cancel listing"}
-                style={{flexGrow: 1, backgroundColor: inPriceEditMode? 'white' : 'red', marginTop:10}}
+                style={{flexGrow: 1, backgroundColor: inPriceEditMode? 'white' : '#b50202', marginTop:10}}
                 textStyle={{fontSize: 14, color: inPriceEditMode ? 'black' :'white'}}
                 onPress={() => {
                   if (!inPriceEditMode) { 

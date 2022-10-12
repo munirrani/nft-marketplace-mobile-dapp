@@ -12,7 +12,6 @@ import { Button, ColorSchemeName, Pressable } from 'react-native';
 
 import Colors from '../constants/Colors';
 import useColorScheme from '../hooks/useColorScheme';
-import ModalScreen from '../screens/ModalScreen';
 import NFTDetailsScreen from '../screens/NFTDetailsScreen';
 import MarketPlaceScreen from '../screens/MarketPlaceScreen';
 import MintNFTScreen from '../screens/MintNFTScreen';
@@ -45,9 +44,6 @@ function RootNavigator() {
       <Stack.Screen name="NFTDetails" component={NFTDetailsScreen} options={
         ({ navigation }) => ({ headerShown: false, animation: 'slide_from_right' })
         } />
-      <Stack.Group screenOptions={{ presentation: 'modal' }}>
-        <Stack.Screen name="Modal" component={ModalScreen}/>
-      </Stack.Group>
     </Stack.Navigator>
   );
 }
@@ -61,23 +57,6 @@ const BottomTab = createBottomTabNavigator<RootTabParamList>();
 function BottomTabNavigator() {
   const colorScheme = useColorScheme();
 
-  const oldHeaderRight = (navigation: any) => {
-    return (
-      <Pressable
-          onPress={() => navigation.navigate('Modal')}
-          style={({ pressed }) => ({
-            opacity: pressed ? 0.5 : 1,
-          })}>
-          <FontAwesome
-            name="info-circle"
-            size={25}
-            color={Colors[colorScheme].text}
-            style={{ marginRight: 15 }}
-          />
-      </Pressable>
-    )
-  }
-
   return (
     <BottomTab.Navigator
       initialRouteName="MarketPlace"
@@ -88,7 +67,7 @@ function BottomTabNavigator() {
         name="MarketPlace"
         component={MarketPlaceScreen}
         options={({ navigation }: RootTabScreenProps<'MarketPlace'>) => ({
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="image" color={color} />,
           headerShown: false,
         })}
       />
@@ -100,7 +79,7 @@ function BottomTabNavigator() {
           headerTitleStyle: {
             fontSize: 25,
           },
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="cloud-upload" color={color} />,
           headerRight: () => <WalletLoginButton />,
         }}
       />
@@ -112,7 +91,7 @@ function BottomTabNavigator() {
           headerTitleStyle: {
             fontSize: 25,
           },
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="bookmark" color={color} />,
           headerRight: () => <WalletLoginButton />,
         }}
       />
@@ -127,5 +106,5 @@ function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
   color: string;
 }) {
-  return <FontAwesome size={30} style={{ marginBottom: -3 }} {...props} />;
+  return <FontAwesome size={25} style={{ marginBottom: -3 }} {...props} />;
 }
