@@ -28,34 +28,15 @@ const MarketplaceSmartContractABI = require('../contracts/abi/NFTMarketPlace.jso
 
 export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>) {
 
+	/* 
+	Global States
+	*/
 	const [NFT, setNFT] = useState([]);
-	const [doneListing, setDoneListing] = useState(false);
+	const[isLoading, setIsLoading] = useState(false)
 	
 	// Wallet
 	const [isWalletConnected, setIsWalletConnected] = useState(false);
 	const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('')
-	const [isStartingTransaction, setIsStartingTransaction] = useState(false);
-	const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false);
-	
-	// Status - Minted
-	const [listingTxHash, setListingTxhash] = useState<string>('')
-	const [priceInEtherText, onChangePriceInEtherText] = useState<string>('');
-	
-	// Status - Listed
-	const [inPriceEditMode, setInPriceEditMode] = useState(false)
-	const [listedChangePriceText, setListedChangePriceText] = useState("")
-
-	const [doneUpdateListing, setDoneUpdateListing] = useState(false)
-	const [updateListingTxHash, setUpdateListingTxHash] = useState<string>('')
-	
-	const [doneCancelListing, setDoneCancelListing] = useState(false)
-	const [cancelListingTxHash, setCancelListingTxHash] = useState<string>('')
-
-	// Status - Sold
-	const [isSalesAvailable, setIsSalesAvailable] = useState(false)
-	const [doneWithdrawSales, setDoneWithdrawSales] = useState(false);
-	
-	const [withdrawSalesTxHash, setWithdrawSalesTxHash] = useState<string>('')
 	
 	const walletConnector = useWalletConnect();
 
@@ -63,6 +44,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	var gasPrice;
 	
 	const getAllInfo = async() => {
+		setIsLoading(true)
 		const document = [];
 
 		const q = query(collection(db, "NFT"),			
@@ -87,6 +69,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		const NFTs = new Set(document.map(d => d.nft_metadata.token_id))
 		const arrayMerged = [...document, ...document2.filter(d => !NFTs.has(d.nft_metadata.token_id))]
 
+		setIsLoading(false)
 		return arrayMerged
 	}
 	
@@ -124,7 +107,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		setIsWalletConnected(isConnected)
 		setCurrentWalletAddress(isConnected ? account : "")
 		isConnected && await getAllInfo()
-		!isConnected && setNFT([])
 	}
 
 	useEffect(() => {
@@ -133,18 +115,15 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				<WalletLoginButton customOnPress={()=> {
 					if (isWalletConnected)  {
 						console.log("Wallet connected, so disconnecting wallet")
-						setNFT([])
 						walletConnector.killSession()
-						setIsWalletConnected(false)
 					} else {
 						console.log("Wallet unconnected, so connecting wallet")
 						walletConnector.connect()
-						setIsWalletConnected(true)
 					}
 				}} />
 			)
 		})
-	  }, [navigation, isWalletConnected, doneListing, doneUpdateListing, doneCancelListing]);
+	  }, [navigation, isWalletConnected]);
 
 	  useFocusEffect(
 		React.useCallback(() => {
@@ -171,269 +150,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	  
 		  return () => {
 			isActive = false;
-			setIsStartingTransaction(false)
-			setIsSubmittingTransaction(false)
-			setDoneCancelListing(false)
-			setDoneListing(false)
-			setDoneUpdateListing(false)
-			setDoneWithdrawSales(false)
 		  };
-		}, [isWalletConnected, currentWalletAddress])
+		}, [isWalletConnected])
 	  );
-
-	const listInMarketPlace = async(tokenId: number) => {
-		console.log("List in marketplace", "with tokenId", tokenId, "...")
-		await providerSetup()
-  
-		try {
-		  const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
-		  const estimatedGasLimit = await MarketPlaceContract.estimateGas.listItem(NFTSmartContractAddress, tokenId, utils.parseUnits(priceInEtherText, 'ether'))
-  
-		  await MarketPlaceContract.listItem(NFTSmartContractAddress, tokenId, utils.parseUnits(priceInEtherText, 'ether'), {
-			gasPrice: gasPrice,
-			gasLimit: estimatedGasLimit
-		  })
-		  .then((tx:any) => { 
-			setIsSubmittingTransaction(true)
-			return tx.wait()
-	    	})
-		  .then((result: any) => {
-			console.log("Marketplace Listing TX Result");
-			console.log(result)
-			// listingTxHash = result.events[0].transactionHash;
-			setListingTxhash(result.events[0].transactionHash)
-			setDoneListing(true)
-		  })
-
-		  console.log("Done listing")
-	  
-		  setTimeout(async () => {
-			console.log("Now updating in Firebase")
-			await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
-				["marketplace_metadata"]: {
-					isListed: true,
-					listing_date: Timestamp.now(),
-					listing_price: priceInEtherText,
-					listing_transaction_hash: listingTxHash,
-					listing_views: 0,
-				},
-			})
-			setIsStartingTransaction(false)
-			setIsSubmittingTransaction(false)
-			setDoneListing(false)
-			onChangePriceInEtherText("")
-		  }, 3000);
-		} catch (error) {
-			setIsStartingTransaction(false)
-			setIsSubmittingTransaction(false)
-			setDoneListing(false)
-			onChangePriceInEtherText("")
-			Alert.alert("Error", error.toString(),
-			[
-				{ text: "Ok", style: "default", },
-			],
-				{ cancelable: true, }
-			);
-		  console.log(error)
-		}
-  
-	}
-
-	const cancelListing = async(tokenId: number) => {
-		console.log("Cancelling listing tokenId" + tokenId)
-		await providerSetup()
-		
-		try {
-			const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
-			const estimatedGasLimit = await MarketPlaceContract.estimateGas.cancelListing(NFTSmartContractAddress, tokenId)
-	
-			await MarketPlaceContract.cancelListing(NFTSmartContractAddress, tokenId, {
-			  gasPrice: gasPrice,
-			  gasLimit: estimatedGasLimit
-			})
-			.then((tx:any) => { 
-				setIsSubmittingTransaction(true)
-				return tx.wait()
-			})
-			.then((result: any) => {
-			  console.log("Cancel Listing TX Result");
-			  console.log(result)
-			  setCancelListingTxHash(result.events[0].transactionHash)
-			//   cancelListingTxHash = result.events[0].transactionHash;
-			  setDoneCancelListing(true)
-			})
-  
-			console.log("Done cancel listing")
-
-			// Give 3 seconds for user to verify on Etherscan before Firebase database updates the new state
-			setTimeout(async () => {
-				console.log("Now updating in Firebase")
-				await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
-					["marketplace_metadata"]: {
-						isListed: false,
-						listing_date: {},
-						listing_price: "",
-						listing_transaction_hash: "",
-						listing_views: 0,
-					},
-				})
-				setIsStartingTransaction(false)
-				setIsSubmittingTransaction(false)
-				setDoneCancelListing(false)
-			  }, 3000);
-		
-		} catch (error) {
-			setIsStartingTransaction(false)
-			setIsSubmittingTransaction(false)
-			setDoneCancelListing(false)
-			Alert.alert("Error", error.toString(),
-			[
-				{ text: "Ok", style: "default", },
-			],
-				{ cancelable: true, }
-			);
-			console.log(error)
-		}
-	}
-	
-	const updateListing = async(tokenId: number, price: string) => {
-		console.log("Update listing with price " + price + " ETH")
-		await providerSetup()
-		
-		try {
-			const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
-			const estimatedGasLimit = await MarketPlaceContract.estimateGas.updateListing(NFTSmartContractAddress, tokenId, utils.parseUnits(price, 'ether'))
-	
-			await MarketPlaceContract.updateListing(NFTSmartContractAddress, tokenId, utils.parseUnits(price, 'ether'), {
-			  gasPrice: gasPrice,
-			  gasLimit: estimatedGasLimit
-			})
-			.then((tx:any) => { 
-				setIsSubmittingTransaction(true)
-				return tx.wait()
-			})
-			.then((result: any) => {
-			  console.log("Update Listing TX Result");
-			  console.log(result)
-			  setUpdateListingTxHash(result.events[0].transactionHash)
-			//   updateListingTxHash = result.events[0].transactionHash;
-			  setDoneUpdateListing(true)
-			})
-  
-			console.log("Done update listing")
-			
-			setTimeout(async () => {
-				console.log("Now updating in Firebase")
-				await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
-					["marketplace_metadata.isListed"]: true,
-					["marketplace_metadata.listing_date"]: Timestamp.now(),
-					["marketplace_metadata.listing_price"]: price,
-					["marketplace_metadata.listing_transaction_hash"]: updateListingTxHash,
-				})
-				setIsStartingTransaction(false)
-				setIsSubmittingTransaction(false)
-				setDoneUpdateListing(false)
-				setInPriceEditMode(false) // close edit mode
-			}, 3000);
-		
-		} catch (error) {
-			setIsStartingTransaction(false)
-			setIsSubmittingTransaction(false)
-			setDoneUpdateListing(false)
-			setInPriceEditMode(false)
-			Alert.alert("Error", error.toString(),
-			[
-				{ text: "Ok", style: "default", },
-			],
-				{ cancelable: true, }
-			);
-			console.log(error)
-		}
-	}
-
-	const getProceeds = async() => {
-		console.log("Checking withdraw availability")
-		await providerSetup()
-		
-		try {
-		  const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
-		  const call = await MarketPlaceContract.getProceeds(currentWalletAddress)
-		  const isAvailable = call.toString() != "0"
-		  setIsSalesAvailable(isAvailable)
-		  if (isAvailable) {
-			const message = "There are " + utils.formatEther(call.toString()) + " ETH available to be withdrawn! Tap on \"Withdraw sales\" to withdraw"
-			console.log(message)
-		  	Alert.alert("Information", message,
-			[
-				{ text: "Ok", style: "default", },
-			],
-				{ cancelable: true, }
-			);
-		  } else {
-			setIsSalesAvailable(false)
-			const message = "It is already withdrawn"
-			console.log(message)
-			Alert.alert("", message,
-			[
-				{ text: "Ok", style: "default", },
-			],
-				{ cancelable: true, }
-			);
-		  }
-		  
-		} catch (error) {
-			Alert.alert("Error", error.toString(),
-			[
-				{ text: "Ok", style: "default", },
-			],
-				{ cancelable: true, }
-			);
-		  console.log(error)
-		}
-	}
-
-	const withdrawSales = async(tokenId: number) => {
-		console.log("Withdraw sales with tokenId", tokenId, "...")
-		await providerSetup()
-		
-		try {
-		  const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
-		  const estimatedGasLimit = await MarketPlaceContract.estimateGas.withdrawProceeds()
-  
-		  await MarketPlaceContract.withdrawProceeds({
-			gasPrice: gasPrice,
-			gasLimit: estimatedGasLimit
-		  })
-		  .then((tx:any) => { 
-			setIsSubmittingTransaction(true)
-			return tx.wait()
-		  })
-		  .then((result: any) => {
-			console.log("Sales TX Result");
-			console.log(result)
-			setWithdrawSalesTxHash(result.transactionHash)
-			// withdrawSalesTxHash = result.events[0].transactionHash;
-			setDoneWithdrawSales(true)
-		  })
-
-		  setTimeout(async () => {
-			setIsStartingTransaction(false)
-			setIsSubmittingTransaction(false)
-			setDoneWithdrawSales(false)
-		}, 3000);
-		} catch (error) {
-			setIsStartingTransaction(false)
-			setIsSubmittingTransaction(false)
-			setDoneWithdrawSales(false)
-			Alert.alert("Error", error.toString(),
-			[
-				{ text: "Ok", style: "default", },
-			],
-				{ cancelable: true, }
-			);
-		  console.log(error)
-		}
-	}
 
 	/*
 	*
@@ -465,9 +184,72 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		)
 	}
 
-	const MintedComponent = ({item, priceText, setPriceText}) => {
+	const MintedComponent = ({item}) => {
 
-		const [textValue, setTextValue] = useState<string>(`${priceText}`)
+		const [priceInEtherText, onChangePriceInEtherText] = useState<string>('');
+
+		const [isStartingTransaction, setIsStartingTransaction] = useState(false)
+		const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false)
+		const [doneListing, setDoneListing] = useState(false)
+		const [listingTxHash, setListingTxHash] = useState('')
+
+		const listInMarketPlace = async() => {
+			const tokenId = item.nft_metadata.token_id
+			console.log("List in marketplace", "with tokenId", tokenId, "...")
+			await providerSetup()
+	  
+			try {
+			  const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
+			  const estimatedGasLimit = await MarketPlaceContract.estimateGas.listItem(NFTSmartContractAddress, tokenId, utils.parseUnits(priceInEtherText, 'ether'))
+	  
+			  await MarketPlaceContract.listItem(NFTSmartContractAddress, tokenId, utils.parseUnits(priceInEtherText, 'ether'), {
+				gasPrice: gasPrice,
+				gasLimit: estimatedGasLimit
+			  })
+			  .then((tx:any) => { 
+				setIsSubmittingTransaction(true)
+				return tx.wait()
+				})
+			  .then((result: any) => {
+				console.log("Marketplace Listing TX Result");
+				console.log(result)
+				setListingTxHash(result.events[0].transactionHash)
+				setDoneListing(true)
+			  })
+	
+			  console.log("Done listing")
+		  
+			  setTimeout(async () => {
+				console.log("Now updating in Firebase")
+				await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
+					["marketplace_metadata"]: {
+						isListed: true,
+						listing_date: Timestamp.now(),
+						listing_price: priceInEtherText,
+						listing_transaction_hash: listingTxHash,
+						listing_views: 0,
+					},
+				})
+				setIsStartingTransaction(false)
+				setIsSubmittingTransaction(false)
+				setDoneListing(false)
+				onChangePriceInEtherText("")
+			  }, 3000);
+			} catch (error) {
+				setIsStartingTransaction(false)
+				setIsSubmittingTransaction(false)
+				setDoneListing(false)
+				onChangePriceInEtherText("")
+				Alert.alert("Error", error.toString(),
+				[
+					{ text: "Ok", style: "default", },
+				],
+					{ cancelable: true, }
+				);
+			  console.log(error)
+			}
+	  
+		}
 
 		return (
 		<View>
@@ -482,9 +264,8 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					}}
 					/>
 				<TextInput 
-					onChangeText={setTextValue}
-					value={textValue}
-					onEndEditing={() => setPriceText(textValue)}
+					onChangeText={onChangePriceInEtherText}
+					value={priceInEtherText}
 					style={{
 						fontSize: 14,
 						borderWidth: 1,
@@ -504,7 +285,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						promptUser(priceInEtherText + " ETH" + "\n\nConfirm price?", 
 						() => {
 							setIsStartingTransaction(true)
-							listInMarketPlace(item.nft_metadata.token_id)
+							listInMarketPlace()
 						}
 						)
 					}}
@@ -536,7 +317,145 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		</View>)
 	}
 	
-	const ListingPriceComponent = (item: any) => 
+	const promptUser = (message: string, action: any) =>
+		Alert.alert(
+			"Confirmation",
+			message, [{
+				text: "Cancel",
+				style: "cancel"
+			}, { 
+				text: "OK", onPress: action 
+			}
+		]
+	);
+
+	const ListingEditComponent = ({item}) => {
+
+		const [isStartingTransaction, setIsStartingTransaction] = useState(false)
+		const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false)
+
+		const [inPriceEditMode, setInPriceEditMode] = useState(false)
+		const [listedChangePriceText, setListedChangePriceText] = useState<string>()
+
+		const [doneUpdateListing, setDoneUpdateListing] = useState(false)
+		const [updateListingTxHash, setUpdateListingTxHash] = useState<string>('')
+		
+		const [doneCancelListing, setDoneCancelListing] = useState(false)
+		const [cancelListingTxHash, setCancelListingTxHash] = useState<string>('')
+
+		const cancelListing = async() => {
+			const tokenId = item.nft_metadata.token_id
+			console.log("Cancelling listing tokenId" + tokenId)
+			await providerSetup()
+			
+			try {
+				const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
+				const estimatedGasLimit = await MarketPlaceContract.estimateGas.cancelListing(NFTSmartContractAddress, tokenId)
+		
+				await MarketPlaceContract.cancelListing(NFTSmartContractAddress, tokenId, {
+				  gasPrice: gasPrice,
+				  gasLimit: estimatedGasLimit
+				})
+				.then((tx:any) => { 
+					setIsSubmittingTransaction(true)
+					return tx.wait()
+				})
+				.then((result: any) => {
+				  console.log("Cancel Listing TX Result");
+				  console.log(result)
+				  setCancelListingTxHash(result.events[0].transactionHash)
+				  setDoneCancelListing(true)
+				})
+	  
+				console.log("Done cancel listing")
+	
+				// Give 3 seconds for user to verify on Etherscan before Firebase database updates the new state
+				setTimeout(async () => {
+					console.log("Now updating in Firebase")
+					await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
+						["marketplace_metadata"]: {
+							isListed: false,
+							listing_date: {},
+							listing_price: "",
+							listing_transaction_hash: "",
+							listing_views: 0,
+						},
+					})
+					setIsStartingTransaction(false)
+					setIsSubmittingTransaction(false)
+					setDoneCancelListing(false)
+				  }, 3000);
+			
+			} catch (error) {
+				setIsStartingTransaction(false)
+				setIsSubmittingTransaction(false)
+				setDoneCancelListing(false)
+				Alert.alert("Error", error.toString(),
+				[
+					{ text: "Ok", style: "default", },
+				],
+					{ cancelable: true, }
+				);
+				console.log(error)
+			}
+		}
+		
+		const updateListing = async(price: string) => {
+			const tokenId = item.nft_metadata_token_id
+			console.log("Update listing with price " + price + " ETH")
+			await providerSetup()
+			
+			try {
+				const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
+				const estimatedGasLimit = await MarketPlaceContract.estimateGas.updateListing(NFTSmartContractAddress, tokenId, utils.parseUnits(price, 'ether'))
+		
+				await MarketPlaceContract.updateListing(NFTSmartContractAddress, tokenId, utils.parseUnits(price, 'ether'), {
+				  gasPrice: gasPrice,
+				  gasLimit: estimatedGasLimit
+				})
+				.then((tx:any) => { 
+					setIsSubmittingTransaction(true)
+					return tx.wait()
+				})
+				.then((result: any) => {
+				  console.log("Update Listing TX Result");
+				  console.log(result)
+				  setUpdateListingTxHash(result.events[0].transactionHash)
+				  setDoneUpdateListing(true)
+				})
+	  
+				console.log("Done update listing")
+				
+				setTimeout(async () => {
+					console.log("Now updating in Firebase")
+					await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
+						["marketplace_metadata.isListed"]: true,
+						["marketplace_metadata.listing_date"]: Timestamp.now(),
+						["marketplace_metadata.listing_price"]: price,
+						["marketplace_metadata.listing_transaction_hash"]: updateListingTxHash,
+					})
+					setIsStartingTransaction(false)
+					setIsSubmittingTransaction(false)
+					setDoneUpdateListing(false)
+					setInPriceEditMode(false) // close edit mode
+				}, 3000);
+			
+			} catch (error) {
+				setIsStartingTransaction(false)
+				setIsSubmittingTransaction(false)
+				setDoneUpdateListing(false)
+				setInPriceEditMode(false)
+				Alert.alert("Error", error.toString(),
+				[
+					{ text: "Ok", style: "default", },
+				],
+					{ cancelable: true, }
+				);
+				console.log(error)
+			}
+		}
+		
+		return(
 		<View>
 			<Text style={{fontWeight: 'bold', marginTop: 10,}}>Price</Text>
 			<View style={{alignItems: 'center', marginTop:10, flexDirection: 'row'}}>
@@ -568,32 +487,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					<Text style={{fontSize: 14}}>{item.marketplace_metadata.listing_price} ETH</Text>
 				}
 			</View>
-		</View>
-
-	const promptUser = (message: string, action: any) =>
-		Alert.alert(
-			"Confirmation",
-			message, [{
-				text: "Cancel",
-				style: "cancel"
-			}, { 
-				text: "OK", onPress: action 
-			}
-		]
-	);
-	/* 
-	Options: 
-	1. Show price in first part of expandable card ✅
-	2. Edit price (text input appears at the same spot as price text)
-			-> Two buttons at the bottom change text (cancel & confirm) ✅
-	3. Cancel listing (alert for confirmation) ✅
-	4. StatusMessage at the bottom showing transaction status. ✅
-	5. Update to firebase ✅
-	
-	Put two buttons side-to-side (update price & cancel) at the bottom
-	*/
-	const ListingEditComponent = (item: any) => 
-		<View>
 			<View style={{marginTop: 10, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center'}}>
 				<Button 
 					title={inPriceEditMode ? "Close" : "Edit Price"}
@@ -621,7 +514,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 							promptUser("Are you sure you want to cancel listing?", 
 								() => {
 									setIsStartingTransaction(true)
-									cancelListing(item.nft_metadata.token_id)
+									cancelListing()
 								}
 							)
 						} else {
@@ -632,7 +525,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 								promptUser(listedChangePriceText + " ETH" + "\n\nConfirm price?", 
 									() => {
 										setIsStartingTransaction(true)
-										updateListing(item.nft_metadata.token_id, listedChangePriceText)
+										updateListing(listedChangePriceText)
 									}
 								)
 							}
@@ -671,14 +564,104 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				}
 			</View>
 		</View>
+		)
+	}
 
-	/* 
-		Add text at the last part to show transaction history in Etherscan
-		1. Button to check rewards (proceeds function in smart contract)
-		2. If ada, collect proceeds. Change button color, text & onPress with green checkbox to receive
-	*/
-	const SoldComponent = (item) => 
-		<View>
+	const SoldComponent = ({item}) => {
+
+		const [isStartingTransaction, setIsStartingTransaction] = useState(false)
+		const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false)
+
+		// Status - Sold
+		const [isSalesAvailable, setIsSalesAvailable] = useState(false)
+		const [doneWithdrawSales, setDoneWithdrawSales] = useState(false);
+		
+		const [withdrawSalesTxHash, setWithdrawSalesTxHash] = useState<string>('')
+
+		const getProceeds = async() => {
+			console.log("Checking withdraw availability")
+			await providerSetup()
+			
+			try {
+			  const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
+			  const call = await MarketPlaceContract.getProceeds(currentWalletAddress)
+			  const isAvailable = call.toString() != "0"
+			  setIsSalesAvailable(isAvailable)
+			  if (isAvailable) {
+				const message = "There are " + utils.formatEther(call.toString()) + " ETH available to be withdrawn! Tap on \"Withdraw sales\" to withdraw"
+				console.log(message)
+				  Alert.alert("Information", message,
+				[
+					{ text: "Ok", style: "default", },
+				],
+					{ cancelable: true, }
+				);
+			  } else {
+				setIsSalesAvailable(false)
+				const message = "It is already withdrawn"
+				console.log(message)
+				Alert.alert("", message,
+				[
+					{ text: "Ok", style: "default", },
+				],
+					{ cancelable: true, }
+				);
+			  }
+			  
+			} catch (error) {
+				Alert.alert("Error", error.toString(),
+				[
+					{ text: "Ok", style: "default", },
+				],
+					{ cancelable: true, }
+				);
+			  console.log(error)
+			}
+		}
+	
+		const withdrawSales = async(tokenId: number) => {
+			console.log("Withdraw sales with tokenId", tokenId, "...")
+			await providerSetup()
+			
+			try {
+			  const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
+			  const estimatedGasLimit = await MarketPlaceContract.estimateGas.withdrawProceeds()
+	  
+			  await MarketPlaceContract.withdrawProceeds({
+				gasPrice: gasPrice,
+				gasLimit: estimatedGasLimit
+			  })
+			  .then((tx:any) => { 
+				setIsSubmittingTransaction(true)
+				return tx.wait()
+			  })
+			  .then((result: any) => {
+				console.log("Sales TX Result");
+				console.log(result)
+				setWithdrawSalesTxHash(result.transactionHash)
+				setDoneWithdrawSales(true)
+			  })
+	
+			  setTimeout(async () => {
+				setIsStartingTransaction(false)
+				setIsSubmittingTransaction(false)
+				setDoneWithdrawSales(false)
+			}, 3000);
+			} catch (error) {
+				setIsStartingTransaction(false)
+				setIsSubmittingTransaction(false)
+				setDoneWithdrawSales(false)
+				Alert.alert("Error", error.toString(),
+				[
+					{ text: "Ok", style: "default", },
+				],
+					{ cancelable: true, }
+				);
+			  console.log(error)
+			}
+		}
+
+		return(<View>
 			<View style={{justifyContent: 'space-between', alignItems: 'stretch'}}>
 				<Text style={{marginTop: 20, marginBottom: 15, alignSelf: 'center', color: "#4989ad"}}
 					onPress={() => Linking.openURL("https://goerli.etherscan.io/token/" + NFTSmartContractAddress + "?a=" + item.nft_metadata.token_id)}>
@@ -727,7 +710,8 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					/>
 				}
 			</View>
-		</View>
+		</View>)
+	}
 
 	const downloadAndOpenFile = async(uri: string, fileName: string) => {
 		const { status, error } = await downloadFileFromUri(
@@ -803,7 +787,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 		const mintedTime = new Date(item.nft_metadata.minted_date.seconds * 1000)
 		return (
-			<View style={{flex:1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+			<View key={item.nft_metadata_token_id} style={{flex:1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
 				<Image 
 					source={{uri: item.nft_metadata.ipfs_image_url}}
 					style={{
@@ -827,13 +811,10 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		)
 	}
 
-	const setPriceText = (value: any) => onChangePriceInEtherText(value)
-
 	const CardExpandedBody = (item: any) => {
 		return (
-			<View style={{margin:15}}>
+			<View key={item.nft_metadata_token_id} style={{margin:15}}>
 				<View style={{width:Dimensions.get('window').width - 45, position:'absolute', alignSelf:"center", backgroundColor:'#aaaaaa', opacity: .25, height:1, zIndex: 5,}} />
-				{ getStatus(item) == "listed" && ListingPriceComponent(item)}
 				<Text style={{fontWeight: 'bold', marginTop: 10,}}>Image Description</Text>
 				<Text style={{marginTop: 10, textAlign:'justify'}}>{item.nft_metadata.description}</Text>
 				<Text style={{fontWeight: 'bold', marginTop: 10,}}>Token ID</Text>
@@ -847,14 +828,14 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				}
 				{ getStatus(item) == "bought" && <>
 					<BoughtComponent item={item} />
-					<MintedComponent item={item} priceText={priceInEtherText} setPriceText={setPriceText} />
+					<MintedComponent item={item} />
 				</>
 				}
 				{ getStatus(item) == "minted" &&
-					<MintedComponent item={item} priceText={priceInEtherText} setPriceText={setPriceText} />
+					<MintedComponent item={item} />
 				}
-				{ getStatus(item) == "listed" && ListingEditComponent(item) }
-				{ getStatus(item) == "sold" && SoldComponent(item)}
+				{ getStatus(item) == "listed" && <ListingEditComponent item={item}/> }
+				{ getStatus(item) == "sold" && <SoldComponent item={item}/>}
 			</View>
 		)
 	}
@@ -870,7 +851,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					<Text style={{marginTop: 10, fontSize: 14, color: "#82bee0"}} onPress={checkWalletAndFetchInfo}>Refresh</Text>
 				</View>
 			}
-			{ isWalletConnected && 
+			{ isWalletConnected && !isLoading &&
 				<View style={{flex: 1, padding: 15}}>
 					{ NFT.length != 0 ?
 						<AccordionList
@@ -897,9 +878,4 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });
