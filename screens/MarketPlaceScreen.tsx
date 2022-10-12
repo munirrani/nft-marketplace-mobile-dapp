@@ -109,11 +109,7 @@ export default function MarketPlaceScreen({ navigation }) {
           <View style={{flex: 2,}}>
             <Text numberOfLines={1} style={{fontWeight: 'bold', color: 'black', fontSize: 20}}>{props.name}</Text>
             <View style={{marginTop: 10, flexDirection: 'row', alignItems: 'center'}}>
-              <Image 
-                source={require('../assets/images/ic_launcher-web.png')}
-                style={{width: 20, height: 20, borderColor: "#aaaaaa", borderRadius: 15}} 
-              />
-              <Text style={{fontSize: 12, color: 'black', marginLeft: 5,}}>
+              <Text style={{fontSize: 12, color: '#aaaaaa'}}>
                 { isUsersOwnNFT(props.owner) ? 
                 "By You"
                   :
@@ -123,8 +119,8 @@ export default function MarketPlaceScreen({ navigation }) {
             </View>
           </View>
           <View style={{flex: 1, alignItems: 'center', justifyContent: 'flex-end', flexDirection: 'row'}}>
-            <Image source={require('../assets/images/Ethereum-Logo-PNG.png')} style={{height: 25, width: 25, tintColor: '#888888'}}/>
-            <Text style={{fontWeight: 'bold', color: '#888888', fontSize: 25, marginLeft: 3,}}>{props.price}</Text>
+            <Image source={require('../assets/images/Ethereum-Logo-PNG.png')} style={{height: 25, width: 25, tintColor: '#666666'}}/>
+            <Text style={{fontWeight: 'bold', color: '#666666', fontSize: 25, marginLeft: 3,}}>{props.price}</Text>
           </View>
         </View>
       </TouchableOpacity>

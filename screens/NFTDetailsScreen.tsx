@@ -1,7 +1,6 @@
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
-import { aspectRatio } from '@walletconnect/react-native-dapp/dist/components/WalletConnectLogo';
 import WalletConnectProvider from '@walletconnect/web3-provider';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView, Linking, Alert} from 'react-native';
 import ReadMore from 'react-native-read-more-text';
 import Button from '../components/Button';
@@ -16,6 +15,7 @@ import { doc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../db-config';
 import {getStatusBarHeight} from "react-native-status-bar-height";
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from '@react-navigation/native';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const MarketplaceSmartContractAddress = '0x1DaEFC61Ef1d94ce351841Bde660F582D7c060Db'
@@ -30,8 +30,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   const { nft_metadata, marketplace_metadata, wallet_address } = route.params;
 
   const [isWalletConnected, setIsWalletConnected] = useState(false);
-	const [signer, setSigner] = useState<JsonRpcSigner>()
-  const [gasPrice, setGasPrice] = useState<BigNumber>()
+  const [connectWalletFromThisPage, setConnectWalletFromThisPage] = useState(false);
 
   const [isStartingTransaction, setIsStartingTransaction] = useState(false);
 	const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false);
@@ -50,6 +49,10 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 
   const walletConnector = useWalletConnect();
 
+  var signer;
+  var gasPrice;
+  var walletAddress = wallet_address;
+
   var buyingTxHash;
   var updateListingTxHash;
   var cancelListingTxHash;
@@ -57,49 +60,75 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 
   const date = new Date(marketplace_metadata.listing_date.seconds * 1000)
 
+  const connectWallet = useCallback(() => {
+    return walletConnector.connect();
+  }, [walletConnector]);
+
+  const setupProvider = async() => {
+    const provider = new WalletConnectProvider({
+      infuraId: INFURA_ID,
+      connector: walletConnector
+    });
+    
+    provider.on("accountsChanged", (accounts: string[]) => {
+      console.log(accounts);
+    });
+    
+    provider.on("chainChanged", (chainId: number) => {
+      console.log(chainId);
+    });
+    
+    provider.on("disconnect", (code: number, reason: string) => {
+      console.log(code, reason);
+    });
+
+    await provider.enable()
+
+    const web3Provider = new providers.Web3Provider(provider);
+    signer = web3Provider.getSigner();
+    
+    gasPrice = await web3Provider.getGasPrice()
+  }
+
+  const checkWalletConnection = async() => {
+    const isConnected = walletConnector.connected
+    setIsWalletConnected(isConnected)
+    if (isConnected) walletAddress = walletConnector.accounts[0]
+  }
+
   useEffect(() => {
-		const setup = async() => {
-			const provider = new WalletConnectProvider({
-				infuraId: INFURA_ID,
-				connector: walletConnector
-			});
-			await provider.enable()
-		
-			const web3Provider = new providers.Web3Provider(provider);
-			const signer = web3Provider.getSigner();
-			setSigner(signer)
-		
-			provider.on("accountsChanged", (accounts: string[]) => {
-				console.log(accounts);
-			});
-		
-			provider.on("chainChanged", (chainId: number) => {
-				console.log(chainId);
-			});
-		
-			provider.on("disconnect", (code: number, reason: string) => {
-				console.log(code, reason);
-			});
-			
-			const gasPrice = await web3Provider.getGasPrice()
-			setGasPrice(gasPrice)
+    checkWalletConnection()
+  }, [isWalletConnected, connectWalletFromThisPage])
 
-      const isConnected = walletConnector.connected
-      setIsWalletConnected(isConnected)
-		}
+  useFocusEffect(
+    React.useCallback(() => {
+      let isActive = true;
+      
+      const checkConnection = async () => {
+        try {
+          if (isActive) {
+            await checkWalletConnection()
+          }
+        } catch (e) {
+        }
+      };
+      checkConnection();
 
-    const getPrice = async() => 
+      const getPrice = async() => 
       fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=myr")
       .then(res => res.json())
       .then(data => {
         setPriceInMyr(
           (parseFloat(data.ethereum.myr) * parseFloat(marketplace_metadata.listing_price)).toFixed(2)
         )
-    })
+      })
     
-    getPrice()
-    setup()
-  }, [isWalletConnected])
+      getPrice()
+      return () => {
+        isActive = false;
+      };
+    }, [isWalletConnected, connectWalletFromThisPage])
+  );
 
   function useImageAspectRatio(imageUrl: string) {
     const [aspectRatio, setAspectRatio] = useState(1);
@@ -126,6 +155,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 
   const buyNFT = async () => {
     console.log("Buying NFT tokenId" + nft_metadata.token_id)
+    await setupProvider()
     try {
       const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
 		  const estimatedGasLimit = await MarketPlaceContract.estimateGas.buyItem(NFTSmartContractAddress, nft_metadata.token_id, {
@@ -156,8 +186,9 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
           listing_date: {},
           listing_price: "",
           listing_transaction_hash: "",
+          listing_views: 0,
         },
-        ["nft_metadata.current_owner_address"]: wallet_address.toLowerCase(),
+        ["nft_metadata.current_owner_address"]: walletAddress.toLowerCase(),
       })
     } catch (error) {
       setIsStartingTransaction(false)
@@ -174,6 +205,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 
   const cancelListing = async() => {
 		console.log("Cancelling listing tokenId" + nft_metadata.token_id)
+    await setupProvider()
 		
 		try {
 			const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
@@ -198,19 +230,18 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   
 			console.log("Done cancel listing")
 
-			// setTimeout(async () => {
-				console.log("Now updating in Firebase")
-				await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
-					["marketplace_metadata"]: {
-						isListed: false,
-						listing_date: {},
-						listing_price: "",
-						listing_transaction_hash: "",
-					},
-				})
-				setIsStartingTransaction(false)
-				setDoneCancelListing(false)
-			  // }, 3000); No need for 3 second timeout as info in this page is passed from navigate.navigation.
+      console.log("Now updating in Firebase")
+      await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
+        ["marketplace_metadata"]: {
+          isListed: false,
+          listing_date: {},
+          listing_price: "",
+          listing_transaction_hash: "",
+          listing_views: 0,
+        },
+      })
+      setIsStartingTransaction(false)
+      setDoneCancelListing(false)
 		
 		} catch (error) {
 			setIsStartingTransaction(false)
@@ -228,7 +259,8 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 
   const updateListing = async() => {
 		console.log("Update listing with price " + priceText + " ETH")
-		
+    await setupProvider()
+
 		try {
 			const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
 			const estimatedGasLimit = await MarketPlaceContract.estimateGas.updateListing(NFTSmartContractAddress, nft_metadata.token_id, utils.parseUnits(priceText, 'ether'))
@@ -252,22 +284,16 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   
 			console.log("Done update listing")
 			
-			// setTimeout(async () => {
-				console.log("Now updating in Firebase")
-				await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
-					["marketplace_metadata"]: {
-						isListed: true,
-						listing_date: Timestamp.now(),
-						listing_price: priceText,
-						listing_transaction_hash: updateListingTxHash,
-					},
-				})
-				setIsStartingTransaction(false)
-				setDoneUpdateListing(false)
-				setInPriceEditMode(false) // close edit mode
-
-        
-			// }, 3000);
+      console.log("Now updating in Firebase")
+      await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
+        ["marketplace_metadata.isListed"]: true,
+        ["marketplace_metadata.listing_date"]: Timestamp.now(),
+        ["marketplace_metadata.listing_price"]: price,
+        ["marketplace_metadata.listing_transaction_hash"]: updateListingTxHash,
+      })
+      setIsStartingTransaction(false)
+      setDoneUpdateListing(false)
+      setInPriceEditMode(false) // close edit mode
 		
 		} catch (error) {
 			setIsStartingTransaction(false)
@@ -302,7 +328,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
       Show less
     </Text>
 
-  const isUsersOwnNFT = (address: string) => address.toLowerCase() === wallet_address.toLowerCase()
+  const isUsersOwnNFT = (address: string) => address.toLowerCase() === walletAddress.toLowerCase()
 
   const promptUser = (message: string, action: any) =>
     Alert.alert(
@@ -436,7 +462,6 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
                     )
                   } else {
                     setInPriceEditMode(false)
-                    // TODO A METHOD TO CLEAR SCREEN AFTER TX SETTLES
                     setIsStartingTransaction(false)
                     setIsSubmittingTransaction(false)
                     setDoneUpdateListing(false)
@@ -447,24 +472,21 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
                 : 
             <>
               <Button 
-                title={"Buy"}
+                title={isWalletConnected ? "Buy" : "Connect wallet to buy"}
                 style={{flexGrow: 1, backgroundColor: 'green', marginTop:20}}
                 textStyle={{fontSize: 14, color: 'white'}}
-                onPress={() => {
-                  isWalletConnected ?
+                onPress={async() => {
+                  if (isWalletConnected) {
                     promptUser("Confirm buy?", 
                       () => {
                         setIsStartingTransaction(true)
                         buyNFT()
                       }
                     )
-                  : 
-                  Alert.alert("Error", "Wallet not connected",
-                  [
-                    { text: "Ok", style: "default", },
-                  ],
-                    { cancelable: true, }
-                  );
+                  } else {
+                    await connectWallet() 
+                    setConnectWalletFromThisPage(true)
+                  }
                 }}
               />
             </> 

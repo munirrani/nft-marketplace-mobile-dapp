@@ -61,8 +61,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 	var signer;
 	var gasPrice;
-
-	// TODO: WAY TO DISPLAY (NO NFT) TEXT WHEN THERE IS NO NFT CORRESPONDING TO USER
 	
 	const getAllInfo = async() => {
 		const document = [];
@@ -215,6 +213,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					listing_date: Timestamp.now(),
 					listing_price: priceInEtherText,
 					listing_transaction_hash: listingTxHash,
+					listing_views: 0,
 				},
 			})
 			setIsStartingTransaction(false)
@@ -273,6 +272,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						listing_date: {},
 						listing_price: "",
 						listing_transaction_hash: "",
+						listing_views: 0,
 					},
 				})
 				setIsStartingTransaction(false)
@@ -323,12 +323,10 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			setTimeout(async () => {
 				console.log("Now updating in Firebase")
 				await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
-					["marketplace_metadata"]: {
-						isListed: true,
-						listing_date: Timestamp.now(),
-						listing_price: price,
-						listing_transaction_hash: updateListingTxHash,
-					},
+					["marketplace_metadata.isListed"]: true,
+					["marketplace_metadata.listing_date"]: Timestamp.now(),
+					["marketplace_metadata.listing_price"]: price,
+					["marketplace_metadata.listing_transaction_hash"]: updateListingTxHash,
 				})
 				setIsStartingTransaction(false)
 				setDoneUpdateListing(false)
@@ -599,7 +597,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 							setListedChangePriceText(item.marketplace_metadata.listing_price)
 						} else {
 							setInPriceEditMode(false)
-							// TODO A METHOD TO CLEAR SCREEN AFTER TX SETTLES
 							setIsStartingTransaction(false)
 							setIsSubmittingTransaction(false)
 							setDoneUpdateListing(false)
@@ -881,8 +878,8 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 							:
 						<View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
 							<Text style={{fontSize: 21, color: '#BBBBBB'}}>There are no NFT from you</Text>
-							<Text onPress={()=> navigation.navigate("MintNFT")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Mint now!</Text>
-							<Text onPress={()=> navigation.navigate("MarketPlace")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Buy now!</Text>
+							<Text onPress={()=> navigation.navigate("MintNFT")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Mint now</Text>
+							<Text onPress={()=> navigation.navigate("MarketPlace")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Buy now</Text>
 						</View>
 					}
 				</View>
