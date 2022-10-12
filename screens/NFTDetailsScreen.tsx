@@ -380,13 +380,15 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
               <Text style={{color: "#aaaaaa"}}>{marketplace_metadata.listing_views} Views</Text>
           </View>
           <Separator />
-          <Text style={{fontWeight: 'bold', marginVertical: 10}}>Image Description</Text>
+          <Text style={{fontWeight: 'bold', marginVertical: 10}}>Description</Text>
           <ReadMore
               numberOfLines={3}
               renderTruncatedFooter={_renderTruncatedFooter}
               renderRevealedFooter={_renderRevealedFooter}>
               <Text>{nft_metadata.description}</Text>
           </ReadMore>
+          <Text style={{fontWeight: 'bold', marginTop: 10}}>Resolution</Text>
+          <Text style={{marginTop: 10}}>{image_metadata.width}x{image_metadata.height}</Text>
           { !!nft_metadata.external_url && 
             <Text style={{fontWeight: 'bold', marginTop: 10}}>External URL</Text>
           }
