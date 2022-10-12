@@ -175,21 +175,22 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
         console.log("Buying TX Result");
         console.log(result)
         buyingTxHash = result.events[0].transactionHash
-        setIsSubmittingTransaction(false)
-        setDoneBuying(true)
 		  })
 
       console.log("Done buying. Now updating in Firebase...")
-      await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
-        ["marketplace_metadata"]: {
-          isListed: false,
-          listing_date: {},
-          listing_price: "",
-          listing_transaction_hash: "",
-          listing_views: 0,
-        },
-        ["nft_metadata.current_owner_address"]: walletAddress.toLowerCase(),
-      })
+      setTimeout(async () => {
+        setDoneBuying(true)
+        await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
+          ["marketplace_metadata"]: {
+            isListed: false,
+            listing_date: {},
+            listing_price: "",
+            listing_transaction_hash: "",
+            listing_views: 0,
+          },
+          ["nft_metadata.current_owner_address"]: walletAddress.toLowerCase(),
+        })
+      }, 1000);
     } catch (error) {
       setIsStartingTransaction(false)
       setIsSubmittingTransaction(false)
@@ -224,24 +225,23 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 			  console.log(result)
 			  // setCancelListingTxHash(result.events[0].transactionHash)
 			  cancelListingTxHash = result.events[0].transactionHash;
-			  setIsSubmittingTransaction(false)
-			  setDoneCancelListing(true)
 			})
-  
+      
 			console.log("Done cancel listing")
-
+      
       console.log("Now updating in Firebase")
-      await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
-        ["marketplace_metadata"]: {
-          isListed: false,
-          listing_date: {},
-          listing_price: "",
-          listing_transaction_hash: "",
-          listing_views: 0,
-        },
-      })
-      setIsStartingTransaction(false)
-      setDoneCancelListing(false)
+      setTimeout(async () => {
+        setDoneCancelListing(true)
+        await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
+          ["marketplace_metadata"]: {
+            isListed: false,
+            listing_date: {},
+            listing_price: "",
+            listing_transaction_hash: "",
+            listing_views: 0,
+          },
+        })
+     }, 1000);
 		
 		} catch (error) {
 			setIsStartingTransaction(false)
@@ -278,22 +278,21 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 			  console.log(result)
         newPrice = priceText
 			  updateListingTxHash = result.events[0].transactionHash;
-			  setIsSubmittingTransaction(false)
-			  setDoneUpdateListing(true)
 			})
-  
+      
 			console.log("Done update listing")
 			
       console.log("Now updating in Firebase")
-      await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
-        ["marketplace_metadata.isListed"]: true,
-        ["marketplace_metadata.listing_date"]: Timestamp.now(),
-        ["marketplace_metadata.listing_price"]: price,
-        ["marketplace_metadata.listing_transaction_hash"]: updateListingTxHash,
-      })
-      setIsStartingTransaction(false)
-      setDoneUpdateListing(false)
-      setInPriceEditMode(false) // close edit mode
+      setTimeout(async () => {
+        setDoneUpdateListing(true)
+        await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
+          ["marketplace_metadata.isListed"]: true,
+          ["marketplace_metadata.listing_date"]: Timestamp.now(),
+          ["marketplace_metadata.listing_price"]: price,
+          ["marketplace_metadata.listing_transaction_hash"]: updateListingTxHash,
+        })
+        setInPriceEditMode(false) // close edit mode
+      }, 1000);
 		
 		} catch (error) {
 			setIsStartingTransaction(false)
