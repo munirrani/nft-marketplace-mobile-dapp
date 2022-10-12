@@ -472,6 +472,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						width: 30,
 						height: 30,
 						marginRight: 10,
+						tintColor: '#555555'
 					}}
 					/>
 				<TextInput 
@@ -539,6 +540,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						width: 20,
 						height: 20,
 						marginRight: 5,
+						tintColor: '#555555'
 					}}
 				/>
 				{

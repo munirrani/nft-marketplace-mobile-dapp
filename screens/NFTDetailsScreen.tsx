@@ -15,6 +15,7 @@ import StatusMessage from '../components/StatusMessage';
 import { doc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../db-config';
 import {getStatusBarHeight} from "react-native-status-bar-height";
+import { StatusBar } from 'expo-status-bar';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const MarketplaceSmartContractAddress = '0x1DaEFC61Ef1d94ce351841Bde660F582D7c060Db'
@@ -44,6 +45,8 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 	
 	const [doneCancelListing, setDoneCancelListing] = useState(false)
 	// const [cancelListingTxHash, setCancelListingTxHash] = useState<string>('')
+
+  const [priceInMyr, setPriceInMyr] = useState('')
 
   const walletConnector = useWalletConnect();
 
@@ -84,7 +87,17 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
       const isConnected = walletConnector.connected
       setIsWalletConnected(isConnected)
 		}
+
+    const getPrice = async() => 
+      fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=myr")
+      .then(res => res.json())
+      .then(data => {
+        setPriceInMyr(
+          (parseFloat(data.ethereum.myr) * parseFloat(marketplace_metadata.listing_price)).toFixed(2)
+        )
+    })
     
+    getPrice()
     setup()
   }, [isWalletConnected])
 
@@ -306,7 +319,8 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   const Separator = () => 
   <View style={{marginTop: 10, width:Dimensions.get('window').width - 20, alignSelf:"center", backgroundColor:'#aaaaaa', opacity: .25, height:1,}} />
 
-  return (
+  return (<>
+    <StatusBar style="light" />
     <ScrollView style={{backgroundColor: 'white'}}>
       <TouchableOpacity style={{left: 10, top: getStatusBarHeight() + 10, position: 'absolute', zIndex: 2}} onPress={() => navigation.pop()}>
         <Image
@@ -322,22 +336,14 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
             height: Dimensions.get('window').width / useImageAspectRatio(nft_metadata.ipfs_image_url),
           }}
         />
-        <View style={{flex: 1, padding: 20}}>
-          <View style={{flexDirection: 'row'}}>
-            <View style={{flex: 3,}}>
-              <Text style={{fontWeight: 'bold', fontSize: 25}}>{nft_metadata.image_name}</Text>
-              <Text style={{marginTop: 10}}>
-                { isUsersOwnNFT(nft_metadata.current_owner_address) ? 
-                  "By You" 
-                    : 
-                  "By " + shortenAddress(nft_metadata.current_owner_address)}
-              </Text>
-              <Text style={{marginTop: 10, color: "#aaaaaa"}}>Listed on {date.getDate() + " " + monthNames[date.getMonth()] + " "  + date.getUTCFullYear()}</Text>
-            </View>
-            <View style={{flex:2, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center'}}>
-                <Image source={require('../assets/images/Ethereum-Logo-PNG.png')} style={{height: 30, width: 30}}/>
-                { inPriceEditMode ? 
-                  <AutoGrowingTextInput 
+        <View style={{flex: 1, padding: 20}}>         
+          <View style={{flexDirection: 'row', justifyContent:'space-between', alignItems: 'center'}}>
+            <Text style={{fontWeight: 'bold', fontSize: 25}}>{nft_metadata.image_name}</Text>
+            <View style={{}}>
+                <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end'}}>
+                  <Image source={require('../assets/images/Ethereum-Logo-PNG.png')} style={{height: 30, width: 30, tintColor: '#555555'}}/>
+                  { inPriceEditMode ? 
+                    <AutoGrowingTextInput 
                     onChangeText={setOnChangePriceText}
                     value={priceText}
                     style={{
@@ -349,13 +355,27 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
                     }}
                     placeholder="Enter new price"
                     multiline={false}
-                  />
-                  :
-                 <Text style={{fontWeight: '500', fontSize: 35, marginLeft: 3,}}>
-                  {!!newPrice ? newPrice : marketplace_metadata.listing_price}
-                  </Text>
-                }
+                    />
+                    :
+                    <Text style={{fontWeight: 'bold', fontSize: 35, paddingLeft: 3,}}>
+                    {!!newPrice ? newPrice: marketplace_metadata.listing_price}
+                    </Text>
+                  }
+                </View>
             </View>
+          </View>
+          <View style={{marginVertical:10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+              <Text style={{color: '#555555'}}>
+                    { isUsersOwnNFT(nft_metadata.current_owner_address) ? 
+                      "By You" 
+                        : 
+                      "By " + shortenAddress(nft_metadata.current_owner_address)}
+              </Text>
+              <Text style={{color: '#555555'}}>~RM {priceInMyr}</Text>
+          </View>
+          <View style={{marginTop:10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+              <Text style={{color: "#aaaaaa"}}>Listed on {date.getDate() + " " + monthNames[date.getMonth()] + " "  + date.getUTCFullYear()}</Text>
+              <Text style={{color: "#aaaaaa"}}>{marketplace_metadata.listing_views} Views</Text>
           </View>
           <Separator />
           <Text style={{fontWeight: 'bold', marginVertical: 10}}>Image Description</Text>
@@ -478,7 +498,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
         </View>
       </View>
     </ScrollView>
-  );
+  </>);
 }
 
 const styles = StyleSheet.create({
