@@ -175,9 +175,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		}, [isWalletConnected, currentWalletAddress])
 	  );
 
-	// }, [isWalletConnected, currentWalletAddress, isStartingTransaction, isSubmittingTransaction, doneListing, inPriceEditMode, 
-	// 	doneUpdateListing, doneCancelListing, listingTxHash, updateListingTxHash, cancelListingTxHash, withdrawSalesTxHash])
-
 	const listInMarketPlace = async(tokenId: number) => {
 		console.log("List in marketplace", "with tokenId", tokenId, "...")
 		await providerSetup()
@@ -199,7 +196,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			console.log(result)
 			// listingTxHash = result.events[0].transactionHash;
 			setListingTxhash(result.events[0].transactionHash)
-			setIsSubmittingTransaction(false)
 			setDoneListing(true)
 		  })
 
@@ -217,6 +213,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				},
 			})
 			setIsStartingTransaction(false)
+			setIsSubmittingTransaction(false)
 			setDoneListing(false)
 			onChangePriceInEtherText("")
 		  }, 3000);
@@ -257,7 +254,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			  console.log(result)
 			  setCancelListingTxHash(result.events[0].transactionHash)
 			//   cancelListingTxHash = result.events[0].transactionHash;
-			  setIsSubmittingTransaction(false)
 			  setDoneCancelListing(true)
 			})
   
@@ -276,6 +272,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					},
 				})
 				setIsStartingTransaction(false)
+				setIsSubmittingTransaction(false)
 				setDoneCancelListing(false)
 			  }, 3000);
 		
@@ -314,7 +311,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			  console.log(result)
 			  setUpdateListingTxHash(result.events[0].transactionHash)
 			//   updateListingTxHash = result.events[0].transactionHash;
-			  setIsSubmittingTransaction(false)
 			  setDoneUpdateListing(true)
 			})
   
@@ -329,6 +325,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					["marketplace_metadata.listing_transaction_hash"]: updateListingTxHash,
 				})
 				setIsStartingTransaction(false)
+				setIsSubmittingTransaction(false)
 				setDoneUpdateListing(false)
 				setInPriceEditMode(false) // close edit mode
 			}, 3000);
@@ -410,7 +407,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			console.log(result)
 			setWithdrawSalesTxHash(result.transactionHash)
 			// withdrawSalesTxHash = result.events[0].transactionHash;
-			setIsSubmittingTransaction(false)
 			setDoneWithdrawSales(true)
 		  })
 		} catch (error) {
