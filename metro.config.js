@@ -3,6 +3,7 @@ module.exports = {
     extraNodeModules: {
       crypto: require.resolve('crypto-browserify'),
       url: require.resolve('url/'),
+      assert: require.resolve('assert'),
       fs: require.resolve('expo-file-system'),
       http: require.resolve('stream-http'),
       https: require.resolve('https-browserify'),
@@ -13,12 +14,5 @@ module.exports = {
       vm: require.resolve('vm-browserify'),
     },
   },
+  assetExts: ["cjs"]
 };
-
-const { getDefaultConfig } = require("@expo/metro-config");
-
-const defaultConfig = getDefaultConfig(__dirname);
-
-defaultConfig.resolver.assetExts.push("cjs");
-
-module.exports = defaultConfig;
