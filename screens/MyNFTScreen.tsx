@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useRef, useState, } from 'react';
-import { StyleSheet, Image, Dimensions, Alert, AppState, Linking, PermissionsAndroid,} from 'react-native';
+import { StyleSheet, Image, Dimensions, Alert, AppState, Linking, PermissionsAndroid, TextInput, KeyboardAvoidingView,} from 'react-native';
 
 import { db } from '../db-config';
 import { Text, View } from '../components/Themed';
@@ -12,7 +12,6 @@ import { providers, utils, Contract } from "ethers";
 
 import { BigNumber } from '@ethersproject/bignumber';
 import WalletConnectProvider from '@walletconnect/web3-provider';
-import {AutoGrowingTextInput} from 'react-native-autogrow-textinput';
 import StatusMessage from '../components/StatusMessage';
 import {AccordionList} from 'react-native-accordion-list-view';
 import CapsuleTextBar from '../components/CapsuleTextBar';
@@ -30,23 +29,21 @@ const MarketplaceSmartContractABI = require('../contracts/abi/NFTMarketPlace.jso
 export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>) {
 
 	const [NFT, setNFT] = useState([]);
-	const [priceInEtherText, onChangePriceInEtherText] = useState<string>('');
 	const [doneListing, setDoneListing] = useState(false);
-
+	
 	// Wallet
 	const [isWalletConnected, setIsWalletConnected] = useState(false);
-	const [signer, setSigner] = useState(null)
 	const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('')
-	const [gasPrice, setGasPrice] = useState(null)
 	const [isStartingTransaction, setIsStartingTransaction] = useState(false);
 	const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false);
-
+	
 	// Status - Minted
 	const [listingTxHash, setListingTxhash] = useState<string>('')
+	const [priceInEtherText, onChangePriceInEtherText] = useState<string>('');
 	
 	// Status - Listed
 	const [inPriceEditMode, setInPriceEditMode] = useState(false)
-	const [changePriceText, setOnChangePriceText] = useState("")
+	const [listedChangePriceText, setListedChangePriceText] = useState("")
 
 	const [doneUpdateListing, setDoneUpdateListing] = useState(false)
 	const [updateListingTxHash, setUpdateListingTxHash] = useState<string>('')
@@ -61,8 +58,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	const [withdrawSalesTxHash, setWithdrawSalesTxHash] = useState<string>('')
 	
 	const walletConnector = useWalletConnect();
-	
-	// TODO: METHOD TO REFRESH
+
+	var signer;
+	var gasPrice;
 
 	// TODO: WAY TO DISPLAY (NO NFT) TEXT WHEN THERE IS NO NFT CORRESPONDING TO USER
 	
@@ -70,7 +68,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		const document = [];
 
 		const q = query(collection(db, "NFT"),			
-			where("nft_metadata.original_owner_address", "==", walletConnector.accounts[0].toLowerCase())
+			where("nft_metadata.original_owner_address", "==", currentWalletAddress.toLowerCase())
 		)
 		const querySnapshot = await getDocs(q);
 		querySnapshot.forEach((doc) => {
@@ -80,7 +78,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 		const document2 = [];
 		const q2 = query(collection(db, "NFT"), 
-			where("nft_metadata.current_owner_address", "==", walletConnector.accounts[0].toLowerCase()),
+			where("nft_metadata.current_owner_address", "==", currentWalletAddress.toLowerCase()),
 		)
 		const querySnapshot2 = await getDocs(q2);
 		querySnapshot2.forEach((doc) => {
@@ -91,24 +89,17 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		const NFTs = new Set(document.map(d => d.nft_metadata.token_id))
 		const arrayMerged = [...document, ...document2.filter(d => !NFTs.has(d.nft_metadata.token_id))]
 
-		setNFT(arrayMerged);
+		return arrayMerged
 	}
 	
-	const setup = async() => {	
+	const providerSetup = async() => {	
 
 		const provider = new WalletConnectProvider({
 			infuraId: INFURA_ID,
 			connector: walletConnector
 		});
-
-		const web3Provider = new providers.Web3Provider(provider);
-		const signer = web3Provider.getSigner();
-		setSigner(signer)
-		
 		provider.on("accountsChanged", async (accounts: string[]) => {
 			console.log("accountsChanged listener")
-			setIsWalletConnected(true)
-			setCurrentWalletAddress(accounts[0])
 		});
 		
 		provider.on("chainChanged", (chainId: number) => {
@@ -117,18 +108,19 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		
 		provider.on("disconnect", async (code: number, reason: string) => {
 			console.log("disconnect listener")
-			setCurrentWalletAddress("")
-			setIsWalletConnected(false)
-			setNFT([])
 			console.log(code, reason);
 		});
+
 		await provider.enable()
+
+		const web3Provider = new providers.Web3Provider(provider);
+		signer = web3Provider.getSigner();
 		
-		const gasPrice = await web3Provider.getGasPrice()
-		setGasPrice(gasPrice)
+		
+		gasPrice = await web3Provider.getGasPrice()
 	}
 
-	const checkWalletStatus = async() => {	
+	const checkWalletAndFetchInfo = async() => {	
 		const isConnected = walletConnector.connected
 		const account = walletConnector.accounts[0]
 		setIsWalletConnected(isConnected)
@@ -138,8 +130,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	}
 
 	useEffect(() => {
-		checkWalletStatus()
-
 		navigation.setOptions({
 			headerRight: () => (
 				<WalletLoginButton customOnPress={()=> {
@@ -156,13 +146,43 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				}} />
 			)
 		})
-	  }, [navigation, isWalletConnected]);
+	  }, [navigation, isWalletConnected, doneListing, doneUpdateListing, doneCancelListing]);
+
+	  useFocusEffect(
+		React.useCallback(() => {
+		  let isActive = true;
+		  
+		  const fetchData = async () => {
+			try {
+			  if (isActive) {
+				  const isConnected = walletConnector.connected
+				  const account = walletConnector.accounts[0]
+				  setIsWalletConnected(isConnected)
+				  setCurrentWalletAddress(isConnected ? account : "")
+				  if (isConnected) {
+					const data = await getAllInfo()
+					setNFT(data)
+				} else {
+					setNFT([])
+				}
+			  }
+			} catch (e) {
+			}
+		  };
+		  fetchData();
+	  
+		  return () => {
+			isActive = false;
+		  };
+		}, [isWalletConnected, currentWalletAddress])
+	  );
 
 	// }, [isWalletConnected, currentWalletAddress, isStartingTransaction, isSubmittingTransaction, doneListing, inPriceEditMode, 
 	// 	doneUpdateListing, doneCancelListing, listingTxHash, updateListingTxHash, cancelListingTxHash, withdrawSalesTxHash])
 
-	const listInMarketPlace = async(tokenId: number, gasPrice: BigNumber, signer: any) => {
+	const listInMarketPlace = async(tokenId: number) => {
 		console.log("List in marketplace", "with tokenId", tokenId, "...")
+		await providerSetup()
   
 		try {
 		  const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
@@ -199,11 +219,13 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			})
 			setIsStartingTransaction(false)
 			setDoneListing(false)
+			onChangePriceInEtherText("")
 		  }, 3000);
 		} catch (error) {
 			setIsStartingTransaction(false)
 			setIsSubmittingTransaction(false)
 			setDoneListing(false)
+			onChangePriceInEtherText("")
 			Alert.alert("Error", error.toString(),
 			[
 				{ text: "Ok", style: "default", },
@@ -217,6 +239,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 	const cancelListing = async(tokenId: number) => {
 		console.log("Cancelling listing tokenId" + tokenId)
+		await providerSetup()
 		
 		try {
 			const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
@@ -272,6 +295,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	
 	const updateListing = async(tokenId: number, price: string) => {
 		console.log("Update listing with price " + price + " ETH")
+		await providerSetup()
 		
 		try {
 			const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
@@ -328,6 +352,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 	const getProceeds = async() => {
 		console.log("Checking withdraw availability")
+		await providerSetup()
 		
 		try {
 		  const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
@@ -368,6 +393,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 	const withdrawSales = async(tokenId: number) => {
 		console.log("Withdraw sales with tokenId", tokenId, "...")
+		await providerSetup()
 		
 		try {
 		  const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
@@ -433,9 +459,13 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		)
 	}
 
-	const MintedComponent = ({item}) => 
+	const MintedComponent = ({item, priceText, setPriceText}) => {
+
+		const [textValue, setTextValue] = useState<string>(`${priceText}`)
+
+		return (
 		<View>
-			<View style={{flexDirection: 'row', alignItems: 'center', marginTop: 10}}>
+			<View style={{flexDirection: 'row', alignItems: 'center', marginTop: 10}}>					
 				<Image 
 					source={require('../assets/images/Ethereum-Logo-PNG.png')} 
 					style={{
@@ -443,10 +473,11 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						height: 30,
 						marginRight: 10,
 					}}
-				/>
-				<AutoGrowingTextInput 
-					onChangeText={onChangePriceInEtherText}
-					value={priceInEtherText}
+					/>
+				<TextInput 
+					onChangeText={setTextValue}
+					value={textValue}
+					onEndEditing={() => setPriceText(textValue)}
 					style={{
 						fontSize: 14,
 						borderWidth: 1,
@@ -457,16 +488,20 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					}}
 					placeholder="Price in Ether"
 					multiline={false}
-				/>
+					/>
 				<Button 
 					title={"Sell"}
 					style={{flex: 2, marginLeft: 10, padding: 7, backgroundColor: 'green'}}
 					textStyle={{fontSize: 12, color: 'white'}}
 					onPress={() => {
-						setIsStartingTransaction(true)
-						listInMarketPlace(item.nft_metadata.token_id, gasPrice, signer)
+						promptUser(priceInEtherText + " ETH" + "\n\nConfirm price?", 
+						() => {
+							setIsStartingTransaction(true)
+							listInMarketPlace(item.nft_metadata.token_id)
+						}
+						)
 					}}
-				/>
+					/>
 			</View>
 			<View>
 				{ isStartingTransaction && 
@@ -491,7 +526,8 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					/>
 				}
 			</View>
-		</View>
+		</View>)
+	}
 	
 	const ListingPriceComponent = (item: any) => 
 		<View>
@@ -507,9 +543,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				/>
 				{
 					inPriceEditMode ? 
-					<AutoGrowingTextInput 
-						onChangeText={setOnChangePriceText}
-						value={changePriceText}
+					<TextInput 
+						onChangeText={setListedChangePriceText}
+						value={listedChangePriceText}
 						style={{
 							fontSize: 14,
 							borderWidth: 1,
@@ -558,7 +594,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					onPress={() => {
 						if (!inPriceEditMode) { 
 							setInPriceEditMode(true)
-							setOnChangePriceText(item.marketplace_metadata.listing_price)
+							setListedChangePriceText(item.marketplace_metadata.listing_price)
 						} else {
 							setInPriceEditMode(false)
 							// TODO A METHOD TO CLEAR SCREEN AFTER TX SETTLES
@@ -583,13 +619,13 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 							)
 						} else {
 							// Confirm price
-							if (changePriceText == item.marketplace_metadata.listing_price) {
+							if (listedChangePriceText == item.marketplace_metadata.listing_price) {
 								console.log("Woi harga sama")
 							} else {
-								promptUser(changePriceText + " ETH" + "\n\nConfirm price?", 
+								promptUser(listedChangePriceText + " ETH" + "\n\nConfirm price?", 
 									() => {
 										setIsStartingTransaction(true)
-										updateListing(item.nft_metadata.token_id, changePriceText)
+										updateListing(item.nft_metadata.token_id, listedChangePriceText)
 									}
 								)
 							}
@@ -756,7 +792,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		}
 	}
 
-	const cardMainBody = (item: any) => {
+	const CardMainBody = (item: any) => {
 
 		const mintedTime = new Date(item.nft_metadata.minted_date.seconds * 1000)
 		return (
@@ -784,7 +820,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		)
 	}
 
-	const cardExpandedBody = (item: any) => {
+	const setPriceText = (value: any) => onChangePriceInEtherText(value)
+
+	const CardExpandedBody = (item: any) => {
 		return (
 			<View style={{margin:15}}>
 				<View style={{width:Dimensions.get('window').width - 45, position:'absolute', alignSelf:"center", backgroundColor:'#aaaaaa', opacity: .25, height:1, zIndex: 5,}} />
@@ -802,11 +840,11 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				}
 				{ getStatus(item) == "bought" && <>
 					<BoughtComponent item={item} />
-					<MintedComponent item={item} />
+					<MintedComponent item={item} priceText={priceInEtherText} setPriceText={setPriceText} />
 				</>
 				}
 				{ getStatus(item) == "minted" &&
-					<MintedComponent item={item} />
+					<MintedComponent item={item} priceText={priceInEtherText} setPriceText={setPriceText} />
 				}
 				{ getStatus(item) == "listed" && ListingEditComponent(item) }
 				{ getStatus(item) == "sold" && SoldComponent(item)}
@@ -822,20 +860,29 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			{ !isWalletConnected && 
 				<View style={{flex:1, justifyContent: 'center', alignItems: 'center'}}>
 					<Text style={{fontSize:21, color: '#BBBBBB', }}>Wallet not Connected</Text>
-					<Text style={{marginTop: 10, fontSize: 14, color: "#82bee0"}} onPress={checkWalletStatus}>Refresh</Text>
+					<Text style={{marginTop: 10, fontSize: 14, color: "#82bee0"}} onPress={checkWalletAndFetchInfo}>Refresh</Text>
 				</View>
 			}
 			{ isWalletConnected && 
 				<View style={{flex: 1, padding: 15}}>
-					<AccordionList
-						containerItemStyle = {{shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: {height: 2,width:0},
-						borderRadius: 6, borderWidth: 1.5, borderColor:'#eeeeee'
-					}}
-					data={NFT}
-					customTitle={item => cardMainBody(item)}
-					customBody={item => cardExpandedBody(item)}
-					animationDuration={300}
-					/>
+					{ NFT.length != 0 ?
+						<AccordionList
+							keyboardShouldPersistTaps="always"
+							containerItemStyle = {{shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: {height: 2,width:0},
+							borderRadius: 6, borderWidth: 1.5, borderColor:'#eeeeee'
+							}}
+							data={NFT}
+							customTitle={CardMainBody}
+							customBody={CardExpandedBody}
+							animationDuration={300}
+						/>
+							:
+						<View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+							<Text style={{fontSize: 21, color: '#BBBBBB'}}>There are no NFT from you</Text>
+							<Text onPress={()=> navigation.navigate("MintNFT")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Mint now!</Text>
+							<Text onPress={()=> navigation.navigate("MarketPlace")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Buy now!</Text>
+						</View>
+					}
 				</View>
 			}
 			</>

@@ -2,9 +2,10 @@ import { FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Image, Dimensions
 
 import { db } from '../db-config';
 import { getDocs, collection, query, where } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
+import { useFocusEffect } from '@react-navigation/native';
 
 const shortenAddress = (address: string) => {
   return `${address.slice(0, 6)}...${address.slice(
@@ -20,27 +21,43 @@ export default function MarketPlaceScreen({ navigation }) {
 
   const walletConnector = useWalletConnect();
 
-  useEffect(() => {
-
-    const checkWalletConnection = async() => {
-      setWalletAddress(walletConnector.connected ? walletConnector.accounts[0] : "")
-    }
-
-    const getAllInfo = async() => {
-      const q = query(collection(db, "NFT"), where("marketplace_metadata.isListed", "==", true));
-      const querySnapshot = await getDocs(q);
-      const document = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data()
-        document.push(data)
-      })
-      setNFTs(document);
-    }
-
-    checkWalletConnection()
-    getAllInfo()
-  }, []);
-
+  const getAllInfo = useCallback(async() => {
+    const q = query(collection(db, "NFT"), where("marketplace_metadata.isListed", "==", true));
+    const querySnapshot = await getDocs(q);
+    const document = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data()
+      document.push(data)
+    })
+    return document
+  }, [])
+  
+  const checkWalletConnection = async() => {
+    setWalletAddress(walletConnector.connected ? walletConnector.accounts[0] : "")
+  }
+  
+  useFocusEffect(
+    React.useCallback(() => {
+      let isActive = true;
+      
+      const fetchData = async () => {
+        try {
+          const data = await getAllInfo()
+          if (isActive) {
+            console.log("isActive called")
+            await checkWalletConnection()
+            setNFTs(data)
+          }
+        } catch (e) {
+        }
+      };
+      fetchData();
+  
+      return () => {
+        isActive = false;
+      };
+    }, [walletAddress, getAllInfo])
+  );
 
   function useImageAspectRatio(imageUrl: string) {
     const [aspectRatio, setAspectRatio] = useState(1);

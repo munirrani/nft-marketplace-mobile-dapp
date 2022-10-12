@@ -31,13 +31,13 @@ export default function MintNFTScreen() {
 	const [doneUploadImage, setDoneUploadImage] = useState(false);
 	const [doneUploadMetadata, setDoneUploadMetadata] = useState(false);
 	const [doneMinting, setDoneMinting] = useState(false);
+	const [mintTxHash, setMintTxHash] = useState<string>('')
 
     const walletConnector = useWalletConnect();
 
 	var ipfsImageURL;
 	var ipfsMetadataURL;
 	var tokenId;
-	var mintTxHash;
 	var blockNumber;
 
 	useEffect(()=> {
@@ -161,7 +161,7 @@ export default function MintNFTScreen() {
 			console.log("Minting TX Result");
 			console.log(result);
 			tokenId = parseInt(result.events[0].topics[3])
-			mintTxHash = result.transactionHash
+			setMintTxHash(result.transactionHash)
 			blockNumber = result.blockNumber
 			setDoneMinting(true)
         })
@@ -286,11 +286,6 @@ export default function MintNFTScreen() {
 			infuraId: INFURA_ID,
 			connector: walletConnector
 		});
-		await provider.enable()
-		
-		const web3Provider = new providers.Web3Provider(provider);
-		const signer = web3Provider.getSigner();
-
 		provider.on("accountsChanged", (accounts: string[]) => {
 			console.log(accounts);
 		});
@@ -302,6 +297,10 @@ export default function MintNFTScreen() {
 		provider.on("disconnect", (code: number, reason: string) => {
 			console.log(code, reason);
 		});
+		await provider.enable()
+		
+		const web3Provider = new providers.Web3Provider(provider);
+		const signer = web3Provider.getSigner();
 
 		const gasPrice = await web3Provider.getGasPrice()
 			
