@@ -13,6 +13,12 @@ module.exports = {
       stream: require.resolve('readable-stream'),
       vm: require.resolve('vm-browserify'),
     },
-    assetExts: ["cjs"]
   },
 };
+
+const { getDefaultConfig } = require('@expo/metro-config');
+
+const defaultConfig = getDefaultConfig(__dirname);
+defaultConfig.resolver.assetExts = [...defaultConfig.resolver.assetExts, 'cjs', 'db', 'mp3', 'ttf', 'obj', 'png', 'jpg', 'gltf', 'glb'];
+
+module.exports = defaultConfig;
