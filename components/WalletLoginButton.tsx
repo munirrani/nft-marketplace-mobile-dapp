@@ -28,7 +28,7 @@ const WalletLoginButton = (props: any) => {
 
     const isConnected = connector.connected
     return (
-        <View style={{flexDirection: 'row', paddingRight: 10}}>
+        <View style={{flexDirection: 'row'}}>
             <Button 
                 onPress={ !!props.customOnPress ? props.customOnPress : isConnected ? disconnect : connect}
                 title={isConnected ? shortenAddress(connector.accounts[0]) : "CONNECT WALLET"}   

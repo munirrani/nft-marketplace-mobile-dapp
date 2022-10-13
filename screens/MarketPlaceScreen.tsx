@@ -51,7 +51,6 @@ export default function MarketPlaceScreen({ navigation }) {
           await checkWalletConnection()
           const data = await getAllInfo()
           if (isActive) {
-            console.log("isActive called")
             setNFTs(data)
           }
         } catch (e) {
@@ -71,7 +70,12 @@ export default function MarketPlaceScreen({ navigation }) {
     })
   }
 
-  function isUsersOwnNFT (address: string) { return address.toLowerCase() == walletAddress.toLowerCase() }
+  function isUsersOwnNFT (address: string) { 
+    if (!isWalletConnected) {
+      return false
+    }
+    return address.toLowerCase() == walletAddress.toLowerCase() 
+  }
   
   const NFTCardView = (props: any) => {
     const aspectRatio = props.imgWidth / props.imgHeight

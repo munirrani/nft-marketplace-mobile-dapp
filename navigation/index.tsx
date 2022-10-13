@@ -4,28 +4,32 @@
  *
  */
 import { FontAwesome } from '@expo/vector-icons';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as React from 'react';
 import { Button, ColorSchemeName, Pressable } from 'react-native';
 
-import Colors from '../constants/Colors';
-import useColorScheme from '../hooks/useColorScheme';
 import NFTDetailsScreen from '../screens/NFTDetailsScreen';
 import MarketPlaceScreen from '../screens/MarketPlaceScreen';
 import MintNFTScreen from '../screens/MintNFTScreen';
 import MyNFTScreen from '../screens/MyNFTScreen';
 import { RootStackParamList, RootTabParamList, RootTabScreenProps } from '../types';
 import LinkingConfiguration from './LinkingConfiguration';
-import WalletLoginButton from '../components/WalletLoginButton';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 
 export default function Navigation({ colorScheme }: { colorScheme: ColorSchemeName }) {
+  const MyTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: 'rgb(255, 255, 255)',
+    },
+  };
 
   return (
     <NavigationContainer
       linking={LinkingConfiguration}
-      theme={colorScheme === 'dark' ? DefaultTheme : DefaultTheme}>
+      theme={MyTheme}>
       <RootNavigator />
     </NavigationContainer>
   );
@@ -40,9 +44,11 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function RootNavigator() {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="Root" component={BottomTabNavigator} options={{ headerShown: false, }} />
+      <Stack.Screen name="Root" component={BottomTabNavigator} options={{ 
+        headerShown: false,
+      }} />
       <Stack.Screen name="NFTDetails" component={NFTDetailsScreen} options={
-        ({ navigation }) => ({ headerShown: false, animation: 'slide_from_right' })
+        ({ navigation }) => ({ headerShown: false })
         } />
     </Stack.Navigator>
   );
@@ -52,22 +58,26 @@ function RootNavigator() {
  * A bottom tab navigator displays tab buttons on the bottom of the display to switch screens.
  * https://reactnavigation.org/docs/bottom-tab-navigator
  */
-const BottomTab = createBottomTabNavigator<RootTabParamList>();
+const BottomTab = createMaterialTopTabNavigator<RootTabParamList>();
 
 function BottomTabNavigator() {
-  const colorScheme = useColorScheme();
 
   return (
     <BottomTab.Navigator
       initialRouteName="MarketPlace"
+      tabBarPosition="bottom"
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme].tint,
+        tabBarIndicatorStyle: {height: 3, backgroundColor: "#000000"},
+        tabBarInactiveTintColor: "#bbbbbb",
+        tabBarActiveTintColor: "#000000",
+        tabBarPressColor: "#dddddd",
+        tabBarLabelStyle: {fontSize: 12},
       }}>
       <BottomTab.Screen
         name="MarketPlace"
         component={MarketPlaceScreen}
         options={({ navigation }: RootTabScreenProps<'MarketPlace'>) => ({
-          tabBarIcon: ({ color }) => <TabBarIcon name="image" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="image"  color={color} />,
           headerShown: false,
         })}
       />
@@ -75,24 +85,16 @@ function BottomTabNavigator() {
         name="MintNFT"
         component={MintNFTScreen}
         options={{
-          title: 'Mint Photo',
-          headerTitleStyle: {
-            fontSize: 25,
-          },
+          tabBarLabel: 'Mint Photo',
           tabBarIcon: ({ color }) => <TabBarIcon name="cloud-upload" color={color} />,
-          headerRight: () => <WalletLoginButton />,
         }}
       />
       <BottomTab.Screen
         name="MyNFT"
         component={MyNFTScreen}
         options={{
-          title: 'My Photo',
-          headerTitleStyle: {
-            fontSize: 25,
-          },
+          tabBarLabel: 'My Photo',
           tabBarIcon: ({ color }) => <TabBarIcon name="bookmark" color={color} />,
-          headerRight: () => <WalletLoginButton />,
         }}
       />
     </BottomTab.Navigator>
@@ -106,5 +108,5 @@ function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
   color: string;
 }) {
-  return <FontAwesome size={25} style={{ marginBottom: -3 }} {...props} />;
+  return <FontAwesome size={20} {...props} />;
 }

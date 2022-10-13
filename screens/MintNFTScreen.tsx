@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Image, Dimensions, ScrollView, Alert, TouchableOpacity, ImageBackground, Text } from 'react-native';
+import { StyleSheet, Image, Dimensions, ScrollView, Alert, TouchableOpacity, ImageBackground, Text, SafeAreaView } from 'react-native';
 import { View } from '../components/Themed';
 import { setDoc, doc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../db-config';
@@ -11,6 +11,8 @@ import { useWalletConnect } from '@walletconnect/react-native-dapp';
 import StatusMessage from '../components/StatusMessage';
 import { INFURA_ID, NFTPORT_AUTH} from '@env';
 import * as ImagePicker from 'expo-image-picker';
+import Header from '../components/Header';
+import { getStatusBarHeight } from 'react-native-status-bar-height';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const NFTSmartContractABI = require('../contracts/abi/PhotoToken.json')
@@ -353,7 +355,9 @@ export default function MintNFTScreen() {
 		);
 
     return (
-      <ScrollView style={{backgroundColor: "#ffffff"}}>
+	<SafeAreaView style={{flex: 1, paddingTop: getStatusBarHeight()}}>
+	   <Header title={"Mint Photo"} />
+      <ScrollView style={{flex:1,backgroundColor: "#ffffff"}}>
         <View style={styles.container}>
           <View style={{ margin:10 }}>
             <View style={{alignItems: 'center'}}>
@@ -472,7 +476,7 @@ export default function MintNFTScreen() {
           </View>
         </View>
       </ScrollView>
-    );
+	  </SafeAreaView>);
 }
 
 const styles = StyleSheet.create({

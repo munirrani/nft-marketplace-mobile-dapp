@@ -16,6 +16,8 @@ import { INFURA_ID } from '@env';
 import { useFocusEffect } from '@react-navigation/native';
 import WalletLoginButton from '../components/WalletLoginButton';
 import { downloadFileFromUri, openDownloadedFile } from 'expo-downloads-manager';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Header from '../components/Header';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const MarketplaceSmartContractAddress = '0x1DaEFC61Ef1d94ce351841Bde660F582D7c060Db'
@@ -27,11 +29,12 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	Global States
 	*/
 	const [NFT, setNFT] = useState([]);
-	const[isLoading, setIsLoading] = useState(false)
 	
 	// Wallet
 	const [isWalletConnected, setIsWalletConnected] = useState(false);
 	const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('')
+	const [isLoading, setIsLoading] = useState(false)
+	const [hasNFT, setHasNFT] = useState(false)
 	
 	const walletConnector = useWalletConnect();
 
@@ -51,6 +54,8 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			document.push(data)
 		})
 
+		document.length > 0 && setHasNFT(true)
+
 		const document2 = [];
 		const q2 = query(collection(db, "NFT"), 
 			where("nft_metadata.current_owner_address", "==", currentWalletAddress.toLowerCase()),
@@ -61,11 +66,13 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			document2.push(data)
 		})
 
+		document2.length > 0 && setHasNFT(true)
+
 		const NFTs = new Set(document.map(d => d.nft_metadata.token_id))
 		const arrayMerged = [...document, ...document2.filter(d => !NFTs.has(d.nft_metadata.token_id))]
 
+		NFT.length != arrayMerged.length && setNFT(arrayMerged)
 		setIsLoading(false)
-		return arrayMerged
 	}
 	
 	const providerSetup = async() => {	
@@ -101,40 +108,26 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		const account = walletConnector.accounts[0]
 		setIsWalletConnected(isConnected)
 		setCurrentWalletAddress(isConnected ? account : "")
-		isConnected && await getAllInfo()
+		if (isConnected)  {
+			await getAllInfo()
+		} else {
+			setNFT([])
+		}
 	}
 
-	useEffect(() => {
-		navigation.setOptions({
-			headerRight: () => (
-				<WalletLoginButton customOnPress={()=> {
-					if (isWalletConnected)  {
-						console.log("Wallet connected, so disconnecting wallet")
-						walletConnector.killSession()
-						setIsWalletConnected(false)
-					} else {
-						console.log("Wallet unconnected, so connecting wallet")
-						walletConnector.connect()
-					}
-				}} />
-			)
-		})
-	  }, [navigation, isWalletConnected]);
-
-	  useFocusEffect(
+	useFocusEffect(
 		React.useCallback(() => {
 		  let isActive = true;
 		  
 		  const fetchData = async () => {
 			try {
 			  if (isActive) {
-				  const isConnected = walletConnector.connected
-				  const account = walletConnector.accounts[0]
-				  setIsWalletConnected(isConnected)
-				  setCurrentWalletAddress(isConnected ? account : "")
-				  if (isConnected) {
-					const data = await getAllInfo()
-					setNFT(data)
+				const isConnected = walletConnector.connected
+				const account = walletConnector.accounts[0]
+				setIsWalletConnected(isConnected)
+				setCurrentWalletAddress(isConnected ? account : "")
+				if (isConnected) {
+					await getAllInfo()
 				} else {
 					setNFT([])
 				}
@@ -843,31 +836,49 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	}
 
 	return (<>
-			{ !isWalletConnected &&
+			<SafeAreaView style={{backgroundColor: "#ffffff"}} />
+			<View style={{padding:15, width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+				<Text style={{fontSize: 25, fontWeight: 'bold'}}>My Photo</Text>
+				<WalletLoginButton customOnPress={()=> {
+					if (isWalletConnected)  {
+						console.log("Wallet connected, so disconnecting wallet")
+						walletConnector.killSession()
+						setIsWalletConnected(false)
+					} else {
+						console.log("Wallet unconnected, so connecting wallet")
+						walletConnector.connect()
+					}
+				}} />
+        	</View>
+			{ !isWalletConnected ?
 				<View style={{flex:1, justifyContent: 'center', alignItems: 'center'}}>
 					<Text style={{fontSize:21, color: '#BBBBBB', }}>Wallet not Connected</Text>
 					<Text style={{marginTop: 10, fontSize: 14, color: "#82bee0"}} onPress={checkWalletAndFetchInfo}>Refresh</Text>
 				</View>
-			}
-			{ isWalletConnected && !isLoading &&
+					:
 				<View style={{flex: 1, padding: 15}}>
-					{ (NFT.length != 0 && !isLoading) ?
-						<AccordionList
-							keyboardShouldPersistTaps="always"
-							containerItemStyle = {{shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: {height: 2,width:0},
-							borderRadius: 6, borderWidth: 1.5, borderColor:'#eeeeee'
-							}}
-							data={NFT}
-							customTitle={CardMainBody}
-							customBody={CardExpandedBody}
-							animationDuration={300}
-						/>
-							:
+					{ isLoading ? 
 						<View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-							<Text style={{fontSize: 21, color: '#BBBBBB'}}>There are no NFT from you</Text>
-							<Text onPress={()=> navigation.navigate("MintNFT")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Mint now</Text>
-							<Text onPress={()=> navigation.navigate("MarketPlace")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Buy now</Text>
+								<Text style={{fontSize: 21, color: '#BBBBBB'}}>Loading...</Text>
 						</View>
+							:
+						hasNFT ?
+							<AccordionList
+								keyboardShouldPersistTaps="always"
+								containerItemStyle = {{shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: {height: 2,width:0},
+									borderRadius: 6, borderWidth: 1.5, borderColor:'#eeeeee'
+								}}
+								data={NFT}
+								customTitle={CardMainBody}
+								customBody={CardExpandedBody}
+								animationDuration={300}
+							/>
+								:
+							<View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+								<Text style={{fontSize: 21, color: '#BBBBBB'}}>There are no NFT from you</Text>
+								<Text onPress={()=> navigation.navigate("MintNFT")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Mint now</Text>
+								<Text onPress={()=> navigation.navigate("MarketPlace")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Buy now</Text>
+							</View>
 					}
 				</View>
 			}

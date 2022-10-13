@@ -30,7 +30,6 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   const { nft_metadata, marketplace_metadata, image_metadata, wallet_address, is_users_own_nft } = route.params;
 
   const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [connectWalletFromThisPage, setConnectWalletFromThisPage] = useState(false);
 
   const [isStartingTransaction, setIsStartingTransaction] = useState(false);
 	const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false);
@@ -43,13 +42,8 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 
   var signer;
   var gasPrice;
-  var walletAddress = wallet_address;
 
   const date = new Date(marketplace_metadata.listing_date.seconds * 1000)
-
-  const connectWallet = useCallback(() => {
-    return walletConnector.connect();
-  }, [walletConnector]);
 
   const setupProvider = async() => {
     const provider = new WalletConnectProvider({
@@ -80,12 +74,11 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   const checkWalletConnection = async() => {
     const isConnected = walletConnector.connected
     setIsWalletConnected(isConnected)
-    if (isConnected) walletAddress = walletConnector.accounts[0]
   }
 
   useEffect(() => {
     checkWalletConnection()
-  }, [isWalletConnected, connectWalletFromThisPage])
+  }, [isWalletConnected])
 
   useFocusEffect(
     React.useCallback(() => {
@@ -114,7 +107,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
       return () => {
         isActive = false;
       };
-    }, [isWalletConnected, connectWalletFromThisPage])
+    }, [isWalletConnected])
   );
 
   const buyNFT = async () => {
@@ -152,7 +145,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
             listing_transaction_hash: "",
             listing_views: 0,
           },
-          ["nft_metadata.current_owner_address"]: walletAddress.toLowerCase(),
+          ["nft_metadata.current_owner_address"]: walletConnector.accounts[0].toLowerCase(),
         })
       }, 1000);
     } catch (error) {
@@ -277,8 +270,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
                       }
                     )
                   } else {
-                    await connectWallet() 
-                    setConnectWalletFromThisPage(true)
+                    navigation.navigate("MyNFT")
                   }
                 }}
               />
