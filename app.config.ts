@@ -110,7 +110,7 @@ const config: ExpoConfig = {
     "supportsTablet": true
   },
   android: {
-    package: "com.clxyder.testdapp",
+    package: "com.digitalizers.piksel",
     adaptiveIcon: {
       foregroundImage: "./assets/images/piksel-adaptive-icon.png",
       backgroundColor: "#ffffff"
