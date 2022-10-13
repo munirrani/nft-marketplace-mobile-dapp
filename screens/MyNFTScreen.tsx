@@ -112,6 +112,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			await getAllInfo()
 		} else {
 			setNFT([])
+			setHasNFT(false)
 		}
 	}
 
@@ -130,6 +131,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					await getAllInfo()
 				} else {
 					setNFT([])
+					setHasNFT(false)
 				}
 			  }
 			} catch (e) {
