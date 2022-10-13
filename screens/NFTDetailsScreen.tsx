@@ -27,7 +27,7 @@ const monthNames = ["January", "February", "March", "April", "May", "June",
 
 export default function NFTDetailsScreen({ route, navigation }: RootStackScreenProps<'NFTDetails'>) {
 
-  const { nft_metadata, marketplace_metadata, image_metadata, wallet_address } = route.params;
+  const { nft_metadata, marketplace_metadata, image_metadata, wallet_address, is_users_own_nft } = route.params;
 
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [connectWalletFromThisPage, setConnectWalletFromThisPage] = useState(false);
@@ -35,15 +35,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   const [isStartingTransaction, setIsStartingTransaction] = useState(false);
 	const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false);
   const [doneBuying, setDoneBuying] = useState(false)
-
-	const [inPriceEditMode, setInPriceEditMode] = useState(false)
-	const [priceText, setOnChangePriceText] = useState('')
-
-	const [doneUpdateListing, setDoneUpdateListing] = useState(false)
-	// const [updateListingTxHash, setUpdateListingTxHash] = useState<string>('')
-	
-	const [doneCancelListing, setDoneCancelListing] = useState(false)
-	// const [cancelListingTxHash, setCancelListingTxHash] = useState<string>('')
+  const [buyingTxHash, setBuyingTxHash] = useState("")
 
   const [priceInMyr, setPriceInMyr] = useState('')
 
@@ -52,11 +44,6 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   var signer;
   var gasPrice;
   var walletAddress = wallet_address;
-
-  var buyingTxHash;
-  var updateListingTxHash;
-  var cancelListingTxHash;
-  var newPrice;
 
   const date = new Date(marketplace_metadata.listing_date.seconds * 1000)
 
@@ -151,7 +138,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 		  .then((result: any) => {
         console.log("Buying TX Result");
         console.log(result)
-        buyingTxHash = result.events[0].transactionHash
+        setBuyingTxHash(result.events[0].transactionHash)
 		  })
 
       console.log("Done buying. Now updating in Firebase...")
@@ -181,111 +168,6 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
     }
   }
 
-  const cancelListing = async() => {
-		console.log("Cancelling listing tokenId" + nft_metadata.token_id)
-    await setupProvider()
-		
-		try {
-			const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
-			const estimatedGasLimit = await MarketPlaceContract.estimateGas.cancelListing(NFTSmartContractAddress, nft_metadata.token_id)
-	
-			await MarketPlaceContract.cancelListing(NFTSmartContractAddress, nft_metadata.token_id, {
-			  gasPrice: gasPrice,
-			  gasLimit: estimatedGasLimit
-			})
-			.then((tx:any) => { 
-				setIsSubmittingTransaction(true)
-				return tx.wait()
-			})
-			.then((result: any) => {
-			  console.log("Cancel Listing TX Result");
-			  console.log(result)
-			  // setCancelListingTxHash(result.events[0].transactionHash)
-			  cancelListingTxHash = result.events[0].transactionHash;
-			})
-      
-			console.log("Done cancel listing")
-      
-      console.log("Now updating in Firebase")
-      setTimeout(async () => {
-        setDoneCancelListing(true)
-        await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
-          ["marketplace_metadata"]: {
-            isListed: false,
-            listing_date: {},
-            listing_price: "",
-            listing_transaction_hash: "",
-            listing_views: 0,
-          },
-        })
-     }, 1000);
-		
-		} catch (error) {
-			setIsStartingTransaction(false)
-			setIsSubmittingTransaction(false)
-			setDoneCancelListing(false)
-			Alert.alert("Error", error.toString(),
-			[
-				{ text: "Ok", style: "default", },
-			],
-				{ cancelable: true, }
-			);
-			console.log(error)
-		}
-	}
-
-  const updateListing = async() => {
-		console.log("Update listing with price " + priceText + " ETH")
-    await setupProvider()
-
-		try {
-			const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
-			const estimatedGasLimit = await MarketPlaceContract.estimateGas.updateListing(NFTSmartContractAddress, nft_metadata.token_id, utils.parseUnits(priceText, 'ether'))
-	
-			await MarketPlaceContract.updateListing(NFTSmartContractAddress, nft_metadata.token_id, utils.parseUnits(priceText, 'ether'), {
-			  gasPrice: gasPrice,
-			  gasLimit: estimatedGasLimit
-			})
-			.then((tx:any) => { 
-				setIsSubmittingTransaction(true)
-				return tx.wait()
-			})
-			.then((result: any) => {
-			  console.log("Update Listing TX Result");
-			  console.log(result)
-        newPrice = priceText
-			  updateListingTxHash = result.events[0].transactionHash;
-			})
-      
-			console.log("Done update listing")
-			
-      console.log("Now updating in Firebase")
-      setTimeout(async () => {
-        setDoneUpdateListing(true)
-        await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
-          ["marketplace_metadata.isListed"]: true,
-          ["marketplace_metadata.listing_date"]: Timestamp.now(),
-          ["marketplace_metadata.listing_price"]: price,
-          ["marketplace_metadata.listing_transaction_hash"]: updateListingTxHash,
-        })
-        setInPriceEditMode(false) // close edit mode
-      }, 1000);
-		
-		} catch (error) {
-			setIsStartingTransaction(false)
-			setIsSubmittingTransaction(false)
-			setDoneUpdateListing(false)
-			setInPriceEditMode(false)
-			Alert.alert("Error", error.toString(),
-			[
-				{ text: "Ok", style: "default", },
-			],
-				{ cancelable: true, }
-			);
-			console.log(error)
-		}
-	}
-
   const shortenAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(
       address.length - 4,
@@ -303,8 +185,6 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
     <Text style={{color: "#4989ad", marginTop: 5}} onPress={handlePress}>
       Show less
     </Text>
-
-  const isUsersOwnNFT = (address: string) => address.toLowerCase() === walletAddress.toLowerCase()
 
   const promptUser = (message: string, action: any) =>
     Alert.alert(
@@ -344,36 +224,18 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
             <View style={{}}>
                 <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end'}}>
                   <Image source={require('../assets/images/Ethereum-Logo-PNG.png')} style={{height: 30, width: 30, tintColor: '#555555'}}/>
-                  { inPriceEditMode ? 
-                    <AutoGrowingTextInput 
-                    onChangeText={setOnChangePriceText}
-                    value={priceText}
-                    style={{
-                      fontSize: 25,
-                      borderWidth: 1,
-                      borderRadius: 5,
-                      padding: 10,
-                      borderColor: "#DDDDDD",
-                    }}
-                    placeholder="Enter new price"
-                    multiline={false}
-                    />
-                    :
-                    <Text style={{fontWeight: 'bold', fontSize: 35, paddingLeft: 3,}}>
-                    {!!newPrice ? newPrice: marketplace_metadata.listing_price}
-                    </Text>
-                  }
+                    <Text style={{fontWeight: 'bold', fontSize: 35, paddingLeft: 3,}}>{marketplace_metadata.listing_price}</Text>
                 </View>
             </View>
           </View>
           <View style={{marginVertical:10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
               <Text style={{color: '#555555'}}>
-                    { isUsersOwnNFT(nft_metadata.current_owner_address) ? 
+                    { is_users_own_nft ? 
                       "By You" 
                         : 
                       "By " + shortenAddress(nft_metadata.current_owner_address)}
               </Text>
-              <Text style={{color: '#555555'}}>~RM {priceInMyr}</Text>
+              <Text style={{color: '#555555'}}>RM {priceInMyr}</Text>
           </View>
           <View style={{marginTop:10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
               <Text style={{color: "#aaaaaa"}}>Listed on {date.getDate() + " " + monthNames[date.getMonth()] + " "  + date.getUTCFullYear()}</Text>
@@ -401,54 +263,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
           }
           <Text style={{fontWeight: 'bold', marginTop: 10}}>Token ID</Text>
           <Text style={{marginTop: 10}}>{nft_metadata.token_id}</Text>
-          { isUsersOwnNFT(nft_metadata.current_owner_address) ? 
-            <>
-              <Button 
-                title={inPriceEditMode ? "Confirm Price" : "Edit Price"}
-                style={{flexGrow: 1, backgroundColor: inPriceEditMode ? 'green' : 'white', marginTop:20}}
-                textStyle={{fontSize: 14, color: inPriceEditMode ? 'white' : 'black'}}
-                onPress={() => {
-                  if (!inPriceEditMode) { 
-                    setInPriceEditMode(true)
-                    setOnChangePriceText(marketplace_metadata.listing_price)
-                  } else {
-                    if (priceText == marketplace_metadata.listing_price) {
-                      console.log("Woi harga sama")
-                    } else {
-                      promptUser(priceText + " ETH" + "\n\nConfirm price?", 
-                        () => {
-                          setIsStartingTransaction(true)
-                          updateListing()
-                        }
-                      )
-                    }
-                  }
-                }}
-              />
-              <Button 
-                title={inPriceEditMode ? "Close" : "Cancel listing"}
-                style={{flexGrow: 1, backgroundColor: inPriceEditMode? 'white' : '#b50202', marginTop:10}}
-                textStyle={{fontSize: 14, color: inPriceEditMode ? 'black' :'white'}}
-                onPress={() => {
-                  if (!inPriceEditMode) { 
-                    // Cancel listing
-                    promptUser("Are you sure you want to cancel listing?", 
-                      () => {
-                        setIsStartingTransaction(true)
-                        cancelListing()
-                      }
-                    )
-                  } else {
-                    setInPriceEditMode(false)
-                    setIsStartingTransaction(false)
-                    setIsSubmittingTransaction(false)
-                    setDoneUpdateListing(false)
-                  }
-                }}
-              />
-            </> 
-                : 
-            <>
+          { !is_users_own_nft &&
               <Button 
                 title={isWalletConnected ? "Buy" : "Connect wallet to buy"}
                 style={{flexGrow: 1, backgroundColor: 'green', marginTop:20}}
@@ -467,7 +282,6 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
                   }
                 }}
               />
-            </> 
           }
           <View style={{flexGrow: 1, marginTop: 20}}>
             { isStartingTransaction && 
@@ -476,21 +290,9 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
             { isSubmittingTransaction && 
               <StatusMessage content="Submitting transaction. Waiting for 1 confirmation..." />
             }
-            { doneUpdateListing &&
-              <StatusMessage
-                content={"Done updating price"}
-                txHash={updateListingTxHash}
-              />
-				    }
-            { doneCancelListing &&
-              <StatusMessage
-                content={"Done cancel listing"}
-                txHash={cancelListingTxHash}
-              />
-				    }
             { doneBuying && 
               <StatusMessage
-                content="NFT Bought!" 
+                content="Photo bought!" 
                 txHash={buyingTxHash}
               />
             }

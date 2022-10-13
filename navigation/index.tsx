@@ -75,7 +75,7 @@ function BottomTabNavigator() {
         name="MintNFT"
         component={MintNFTScreen}
         options={{
-          title: 'Mint NFT',
+          title: 'Mint Photo',
           headerTitleStyle: {
             fontSize: 25,
           },
@@ -87,7 +87,7 @@ function BottomTabNavigator() {
         name="MyNFT"
         component={MyNFTScreen}
         options={{
-          title: 'My NFT',
+          title: 'My Photo',
           headerTitleStyle: {
             fontSize: 25,
           },

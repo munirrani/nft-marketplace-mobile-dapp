@@ -111,6 +111,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					if (isWalletConnected)  {
 						console.log("Wallet connected, so disconnecting wallet")
 						walletConnector.killSession()
+						setIsWalletConnected(false)
 					} else {
 						console.log("Wallet unconnected, so connecting wallet")
 						walletConnector.connect()
@@ -221,7 +222,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						isListed: true,
 						listing_date: Timestamp.now(),
 						listing_price: priceInEtherText,
-						listing_transaction_hash: listingTxHash,
+						listing_transaction_hash: listingTxHash.toLowerCase(),
 						listing_views: 0,
 					},
 				})
@@ -427,7 +428,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						["marketplace_metadata.isListed"]: true,
 						["marketplace_metadata.listing_date"]: Timestamp.now(),
 						["marketplace_metadata.listing_price"]: price,
-						["marketplace_metadata.listing_transaction_hash"]: updateListingTxHash,
+						["marketplace_metadata.listing_transaction_hash"]: updateListingTxHash.toLowerCase(),
 					})
 					setIsStartingTransaction(false)
 					setIsSubmittingTransaction(false)
@@ -482,7 +483,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					<Text style={{fontSize: 14}}>{item.marketplace_metadata.listing_price} ETH</Text>
 				}
 			</View>
-			<View style={{marginTop: 10, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center'}}>
+			<View style={{marginTop: 20, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center'}}>
 				<Button 
 					title={inPriceEditMode ? "Close" : "Edit Price"}
 					style={{flex: 1, marginRight: 10, backgroundColor: inPriceEditMode ? 'white' : 'green'}}
@@ -810,9 +811,11 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		return (
 			<View key={item.nft_metadata_token_id} style={{margin:15}}>
 				<View style={{width:Dimensions.get('window').width - 45, position:'absolute', alignSelf:"center", backgroundColor:'#aaaaaa', opacity: .25, height:1, zIndex: 5,}} />
-				<Text style={{fontWeight: 'bold', marginTop: 10,}}>Image Description</Text>
+				<Text style={{fontWeight: 'bold', marginTop: 10,}}>Description</Text>
 				<Text style={{marginTop: 10, textAlign:'justify'}}>{item.nft_metadata.description}</Text>
-				<Text style={{fontWeight: 'bold', marginTop: 10,}}>Token ID</Text>
+				<Text style={{fontWeight: 'bold', marginTop: 10}}>Resolution</Text>
+          		<Text style={{marginTop: 10}}>{item.image_metadata.width}x{item.image_metadata.height}</Text>
+				<Text style={{fontWeight: 'bold', marginTop: 10,}}>ID</Text>
 				<Text style={{marginTop: 10}}>{item.nft_metadata.token_id}</Text>
 				<Text style={{fontWeight: 'bold', marginTop: 10,}}>Current Owner</Text>
 				<AddressText style={{marginTop: 10}} text={item.nft_metadata.current_owner_address} />
@@ -840,7 +843,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	}
 
 	return (<>
-			{ !isWalletConnected && 
+			{ !isWalletConnected &&
 				<View style={{flex:1, justifyContent: 'center', alignItems: 'center'}}>
 					<Text style={{fontSize:21, color: '#BBBBBB', }}>Wallet not Connected</Text>
 					<Text style={{marginTop: 10, fontSize: 14, color: "#82bee0"}} onPress={checkWalletAndFetchInfo}>Refresh</Text>
@@ -848,7 +851,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			}
 			{ isWalletConnected && !isLoading &&
 				<View style={{flex: 1, padding: 15}}>
-					{ NFT.length != 0 ?
+					{ (NFT.length != 0 && !isLoading) ?
 						<AccordionList
 							keyboardShouldPersistTaps="always"
 							containerItemStyle = {{shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: {height: 2,width:0},

@@ -17,11 +17,12 @@ const shortenAddress = (address: string) => {
 
 export default function MarketPlaceScreen({ navigation }) {
 
-  const [NFT, setNFTs] = useState([]);
-  const [walletAddress, setWalletAddress] = useState<string>('')
-
   const walletConnector = useWalletConnect();
-
+  
+  const [NFT, setNFTs] = useState([]);
+  const [walletAddress, setWalletAddress] = useState<string>("")
+  const [isWalletConnected, setIsWalletConnected] = useState(false)
+  
   const getAllInfo = useCallback(async() => {
     const q = query(collection(db, "NFT"), where("marketplace_metadata.isListed", "==", true));
     const querySnapshot = await getDocs(q);
@@ -34,7 +35,11 @@ export default function MarketPlaceScreen({ navigation }) {
   }, [])
   
   const checkWalletConnection = async() => {
-    setWalletAddress(walletConnector.connected ? walletConnector.accounts[0] : "")
+    const isConnected = walletConnector.connected
+    const account = walletConnector.accounts[0]
+    console.log(isConnected, account)
+    setIsWalletConnected(isConnected)
+    setWalletAddress(account)
   }
   
   useFocusEffect(
@@ -43,21 +48,21 @@ export default function MarketPlaceScreen({ navigation }) {
       
       const fetchData = async () => {
         try {
+          await checkWalletConnection()
           const data = await getAllInfo()
           if (isActive) {
             console.log("isActive called")
-            await checkWalletConnection()
             setNFTs(data)
           }
         } catch (e) {
         }
       };
       fetchData();
-  
+    
       return () => {
         isActive = false;
       };
-    }, [walletAddress, getAllInfo])
+    }, [isWalletConnected, getAllInfo])
   );
 
   async function incrementView(tokenId: number) {
@@ -66,10 +71,11 @@ export default function MarketPlaceScreen({ navigation }) {
     })
   }
 
+  function isUsersOwnNFT (address: string) { return address.toLowerCase() == walletAddress.toLowerCase() }
+  
   const NFTCardView = (props: any) => {
     const aspectRatio = props.imgWidth / props.imgHeight
 
-    const isUsersOwnNFT = (address: string) => address.toLowerCase() === walletAddress.toLowerCase()
     return (
       <TouchableOpacity onPress={props.navigation} activeOpacity={.75} style={{
         marginVertical: 15
@@ -122,7 +128,8 @@ export default function MarketPlaceScreen({ navigation }) {
                 nft_metadata: item.nft_metadata, 
                 marketplace_metadata: item.marketplace_metadata, 
                 image_metadata: item.image_metadata,
-                wallet_address: walletAddress 
+                wallet_address: walletAddress,
+                is_users_own_nft: isUsersOwnNFT(item.nft_metadata.current_owner_address),
               })
             }
           }
@@ -138,7 +145,7 @@ export default function MarketPlaceScreen({ navigation }) {
           data={NFT}
           style={{backgroundColor: 'white'}}
           ListHeaderComponent={
-              <Text style={{fontSize: 30, fontWeight: 'bold', alignSelf: 'center'}}>NFT Marketplace</Text>
+              <Text style={{fontSize: 30, fontWeight: 'bold', alignSelf: 'center'}}>Piksel Marketplace</Text>
           }
           ListHeaderComponentStyle={{height: 80, width: Dimensions.get('window').width, marginTop: getStatusBarHeight(), justifyContent: 'center'}}
           numColumns={1}

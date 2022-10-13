@@ -285,6 +285,7 @@ export default function MintNFTScreen() {
 			);
 			return false
 		}
+
 		return true
 	}
 
@@ -339,6 +340,17 @@ export default function MintNFTScreen() {
 		setDoneUploadMetadata(false)
 		setDoneMinting(false)
 	}
+
+	const promptUser = (message: string, action: any) =>
+		Alert.alert(
+			"Confirmation",
+			message, [{
+				text: "Cancel",
+				style: "cancel"
+			}, { 
+				text: "OK", onPress: action 
+			}]
+		);
 
     return (
       <ScrollView style={{backgroundColor: "#ffffff"}}>
@@ -423,9 +435,11 @@ export default function MintNFTScreen() {
 			<Button 
 			  	style={{marginVertical: 10, width: '100%', backgroundColor: 'green',}}
                 onPress={() => {
-					const check = doChecks()
-					setIsStartingMinting(check)
-					check && startMinting()
+					promptUser("Confirm mint?", () => {
+						const check = doChecks()
+						setIsStartingMinting(check)
+						check && startMinting()
+					})
 				}}
                 title={"Mint it!"}
 				textStyle={{color: 'white', fontWeight: 'bold'}}
