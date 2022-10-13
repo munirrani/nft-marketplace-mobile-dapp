@@ -88,15 +88,15 @@ const withPackageVisibility: ConfigPlugin = (config) => {
 };
 
 const config: ExpoConfig = {
-  name: 'test-dapp',
-  slug: 'test-dapp',
+  name: 'Piksel',
+  slug: 'Piksel',
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/images/icon.png",
+  icon: "./assets/images/piksel-icon.png",
   scheme: "myapp",
   userInterfaceStyle: "automatic",
   splash: {
-    image: "./assets/images/splash.png",
+    image: "./assets/images/piksel-splash.png",
     resizeMode: "contain",
     backgroundColor: "#ffffff"
   },
@@ -112,7 +112,7 @@ const config: ExpoConfig = {
   android: {
     package: "com.clxyder.testdapp",
     adaptiveIcon: {
-      foregroundImage: "./assets/images/adaptive-icon.png",
+      foregroundImage: "./assets/images/piksel-adaptive-icon.png",
       backgroundColor: "#ffffff"
     }
   },
