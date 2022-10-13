@@ -813,8 +813,8 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				<View style={{width:Dimensions.get('window').width - 45, position:'absolute', alignSelf:"center", backgroundColor:'#aaaaaa', opacity: .25, height:1, zIndex: 5,}} />
 				<Text style={{fontWeight: 'bold', marginTop: 10,}}>Description</Text>
 				<Text style={{marginTop: 10, textAlign:'justify'}}>{item.nft_metadata.description}</Text>
-				<Text style={{fontWeight: 'bold', marginTop: 10}}>Resolution</Text>
-          		<Text style={{marginTop: 10}}>{item.image_metadata.width}x{item.image_metadata.height}</Text>
+				<Text style={{fontWeight: 'bold', marginTop: 10}}>Dimensions</Text>
+          		<Text style={{marginTop: 10}}>{item.image_metadata.width} x {item.image_metadata.height}</Text>
 				<Text style={{fontWeight: 'bold', marginTop: 10,}}>ID</Text>
 				<Text style={{marginTop: 10}}>{item.nft_metadata.token_id}</Text>
 				<Text style={{fontWeight: 'bold', marginTop: 10,}}>Current Owner</Text>
