@@ -261,7 +261,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
               {nft_metadata.external_url}
             </Text>
           }
-          <Text style={{fontWeight: 'bold', marginTop: 10}}>Token ID</Text>
+          <Text style={{fontWeight: 'bold', marginTop: 10}}>ID</Text>
           <Text style={{marginTop: 10}}>{nft_metadata.token_id}</Text>
           { !is_users_own_nft &&
               <Button 
