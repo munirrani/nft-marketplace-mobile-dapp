@@ -93,7 +93,7 @@ export default function MarketPlaceScreen({ navigation }) {
             <Text numberOfLines={1} style={{fontWeight: 'bold', color: 'black', fontSize: 20}}>{props.name}</Text>
             <View style={{marginTop: 10, flexDirection: 'row', alignItems: 'center'}}>
               <Text style={{fontSize: 12, color: '#aaaaaa'}}>
-                { isUsersOwnNFT(props.owner) ? 
+                { isWalletConnected && isUsersOwnNFT(props.owner) ? 
                 "By You"
                   :
                 "By " + shortenAddress(props.owner)
