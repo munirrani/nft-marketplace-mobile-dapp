@@ -9,8 +9,9 @@ import { useWalletConnect } from '@walletconnect/react-native-dapp';
 import StatusMessage from '../components/StatusMessage';
 import { INFURA_ID, NFTPORT_AUTH} from '@env';
 import * as ImagePicker from 'expo-image-picker';
-import Header from '../components/Header';
 import { getStatusBarHeight } from 'react-native-status-bar-height';
+import WalletLoginButton from '../components/WalletLoginButton';
+import { useFocusEffect } from '@react-navigation/native';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const NFTSmartContractABI = require('../contracts/abi/PhotoToken.json')
@@ -36,12 +37,21 @@ export default function MintNFTScreen() {
 
 	var ipfsImageURL;
 	var ipfsMetadataURL;
-	var tokenId;
-	var blockNumber;
-
-	useEffect(()=> {
-		setIsWalletConnected(walletConnector.connected)
-	}, [])
+	
+	const checkWalletConnection = async() => {
+		const isConnected = walletConnector.connected
+		setIsWalletConnected(isConnected)
+	}
+	  
+	useFocusEffect(
+		React.useCallback(() => {
+			let isActive = true;
+			isActive && checkWalletConnection()
+			return () => {
+				isActive = false;
+			};
+		}, [isWalletConnected])
+	);
 
 
 	const handleImageSelection = async() => {
@@ -52,8 +62,6 @@ export default function MintNFTScreen() {
 		
 		if (!result.cancelled) {
 			setImageResponse(result);
-			setImageWidth(result.width)
-			setImageHeight(result.height)
 		}
 	}
 
@@ -322,7 +330,20 @@ export default function MintNFTScreen() {
 
     return (
 	<SafeAreaView style={{flex: 1, paddingTop: getStatusBarHeight()}}>
-	   <Header title={"Mint Photo"} />
+		<View style={{padding:15, width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+			<Text style={{fontSize: 25, fontWeight: 'bold'}}>My Photo</Text>
+			<WalletLoginButton customOnPress={()=> {
+				if (isWalletConnected)  {
+					console.log("Wallet connected, so disconnecting wallet")
+					walletConnector.killSession()
+					setIsWalletConnected(false)
+					clearScreen()
+				} else {
+					console.log("Wallet unconnected, so connecting wallet")
+					walletConnector.connect()
+				}
+				}} />
+		</View>
       <ScrollView style={{flex:1,backgroundColor: "#ffffff"}}>
         <View style={styles.container}>
           <View style={{ margin:10 }}>
@@ -411,7 +432,7 @@ export default function MintNFTScreen() {
 						check && startMinting()
 					})
 				}}
-                title={"Mint it!"}
+                title={"Mint Picture"}
 				textStyle={{color: 'white', fontWeight: 'bold'}}
               />
 			<View style={{marginLeft: 10}}>
@@ -429,7 +450,7 @@ export default function MintNFTScreen() {
 				}
 				{ doneMinting && 
 					<StatusMessage
-						content="NFT Minted!" 
+						content="Picture minted" 
 						txHash={mintTxHash}
 					/>
 				}

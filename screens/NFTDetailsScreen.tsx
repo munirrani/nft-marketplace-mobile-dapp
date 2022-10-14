@@ -196,11 +196,11 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
         />
         <View style={{flex: 1, padding: 20}}>         
           <View style={{flexDirection: 'row', justifyContent:'space-between', alignItems: 'center'}}>
-            <Text style={{fontWeight: 'bold', fontSize: 25}}>{nft_metadata.image_name}</Text>
-            <View style={{}}>
+            <Text style={{flex: 5, fontWeight: 'bold', fontSize: 25}}>{nft_metadata.image_name}</Text>
+            <View style={{flex: 2}}>
                 <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end'}}>
-                  <Image source={require('../assets/images/Ethereum-Logo-PNG.png')} style={{height: 30, width: 30, tintColor: '#555555'}}/>
-                    <Text style={{fontWeight: 'bold', fontSize: 35, paddingLeft: 3,}}>{marketplace_metadata.listing_price}</Text>
+                  <Image source={require('../assets/images/Ethereum-Logo-PNG.png')} style={{height: 25, width: 25, tintColor: '#555555'}}/>
+                    <Text style={{fontWeight: 'bold', fontSize: 30, paddingLeft: 5,}}>{marketplace_metadata.listing_price}</Text>
                 </View>
             </View>
           </View>
@@ -241,8 +241,8 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
           <Text style={{marginTop: 10}}>{nft_metadata.token_id}</Text>
           { !is_users_own_nft &&
               <Button 
-                title={isWalletConnected ? "Buy" : "Connect wallet to buy"}
-                style={{flexGrow: 1, backgroundColor: 'green', marginTop:20}}
+                title={isWalletConnected ? doneBuying ? "Bought" : "Buy" : "Connect wallet to buy"}
+                style={{flexGrow: 1, backgroundColor: doneBuying ? '#dddddd' : 'green', marginTop:20}}
                 textStyle={{fontSize: 14, color: 'white'}}
                 onPress={async() => {
                   if (isWalletConnected) {
