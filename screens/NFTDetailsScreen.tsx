@@ -9,10 +9,7 @@ import {AutoGrowingTextInput} from 'react-native-autogrow-textinput';
 import { Text, View } from '../components/Themed';
 import { RootStackScreenProps } from '../types';
 import { BigNumber, Contract, providers, utils } from 'ethers';
-import { JsonRpcSigner } from '@ethersproject/providers';
 import StatusMessage from '../components/StatusMessage';
-import { doc, Timestamp, updateDoc } from 'firebase/firestore';
-import { db } from '../db-config';
 import {getStatusBarHeight} from "react-native-status-bar-height";
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
@@ -133,21 +130,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
         console.log(result)
         setBuyingTxHash(result.events[0].transactionHash)
 		  })
-
-      console.log("Done buying. Now updating in Firebase...")
-      setTimeout(async () => {
-        setDoneBuying(true)
-        await updateDoc(doc(db, "NFT", "NFT-"+ nft_metadata.token_id), {
-          ["marketplace_metadata"]: {
-            isListed: false,
-            listing_date: {},
-            listing_price: "",
-            listing_transaction_hash: "",
-            listing_views: 0,
-          },
-          ["nft_metadata.current_owner_address"]: walletConnector.accounts[0].toLowerCase(),
-        })
-      }, 1000);
+      setDoneBuying(true)
     } catch (error) {
       setIsStartingTransaction(false)
       setIsSubmittingTransaction(false)

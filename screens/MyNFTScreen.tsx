@@ -4,7 +4,7 @@ import { StyleSheet, Image, Dimensions, Alert, Linking, TextInput} from 'react-n
 import { db } from '../db-config';
 import { Text, View } from '../components/Themed';
 import { RootTabScreenProps } from '../types';
-import { doc, Timestamp, updateDoc, getDocs, collection, query, where } from 'firebase/firestore';
+import { getDocs, collection, query, where } from 'firebase/firestore';
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
 import { providers, utils, Contract } from "ethers";
 import WalletConnectProvider from '@walletconnect/web3-provider';
@@ -17,7 +17,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import WalletLoginButton from '../components/WalletLoginButton';
 import { downloadFileFromUri, openDownloadedFile } from 'expo-downloads-manager';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Header from '../components/Header';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const MarketplaceSmartContractAddress = '0x1DaEFC61Ef1d94ce351841Bde660F582D7c060Db'
@@ -210,22 +209,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	
 			  console.log("Done listing")
 		  
-			  setTimeout(async () => {
-				console.log("Now updating in Firebase")
-				await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
-					["marketplace_metadata"]: {
-						isListed: true,
-						listing_date: Timestamp.now(),
-						listing_price: priceInEtherText,
-						listing_transaction_hash: listingTxHash.toLowerCase(),
-						listing_views: 0,
-					},
-				})
-				setIsStartingTransaction(false)
-				setIsSubmittingTransaction(false)
-				setDoneListing(false)
-				onChangePriceInEtherText("")
-			  }, 3000);
 			} catch (error) {
 				setIsStartingTransaction(false)
 				setIsSubmittingTransaction(false)
@@ -359,23 +342,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				})
 	  
 				console.log("Done cancel listing")
-	
-				// Give 3 seconds for user to verify on Etherscan before Firebase database updates the new state
-				setTimeout(async () => {
-					console.log("Now updating in Firebase")
-					await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
-						["marketplace_metadata"]: {
-							isListed: false,
-							listing_date: {},
-							listing_price: "",
-							listing_transaction_hash: "",
-							listing_views: 0,
-						},
-					})
-					setIsStartingTransaction(false)
-					setIsSubmittingTransaction(false)
-					setDoneCancelListing(false)
-				  }, 3000);
 			
 			} catch (error) {
 				setIsStartingTransaction(false)
@@ -416,20 +382,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				})
 	  
 				console.log("Done update listing")
-				
-				setTimeout(async () => {
-					console.log("Now updating in Firebase")
-					await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
-						["marketplace_metadata.isListed"]: true,
-						["marketplace_metadata.listing_date"]: Timestamp.now(),
-						["marketplace_metadata.listing_price"]: price,
-						["marketplace_metadata.listing_transaction_hash"]: updateListingTxHash.toLowerCase(),
-					})
-					setIsStartingTransaction(false)
-					setIsSubmittingTransaction(false)
-					setDoneUpdateListing(false)
-					setInPriceEditMode(false) // close edit mode
-				}, 3000);
+				setInPriceEditMode(false) // close edit mode
 			
 			} catch (error) {
 				setIsStartingTransaction(false)

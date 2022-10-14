@@ -1,7 +1,7 @@
 import { FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Image, Dimensions, View, Text, ImageBackground } from 'react-native';
 
 import { db } from '../db-config';
-import { getDocs, collection, query, where, setDoc, doc, increment, updateDoc } from 'firebase/firestore';
+import { getDocs, collection, query, where, doc, increment, updateDoc } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useWalletConnect } from '@walletconnect/react-native-dapp';

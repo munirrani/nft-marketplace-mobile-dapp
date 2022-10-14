@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Image, Dimensions, ScrollView, Alert, TouchableOpacity, ImageBackground, Text, SafeAreaView } from 'react-native';
+import React, { useState, useEffect, } from 'react';
+import { StyleSheet, Image, ScrollView, Alert, TouchableOpacity, ImageBackground, Text, SafeAreaView } from 'react-native';
 import { View } from '../components/Themed';
-import { setDoc, doc, Timestamp, updateDoc } from 'firebase/firestore';
-import { db } from '../db-config';
 import {AutoGrowingTextInput} from 'react-native-autogrow-textinput';
 import Button from '../components/Button';
 import { BigNumber, Contract, providers } from 'ethers';
@@ -28,8 +26,6 @@ export default function MintNFTScreen() {
     const [descriptionText, onChangeDescriptionText] = useState<string>('');
     const [externalURLText, onChangeExternalURLText] = useState<string>('');
     const [imageResponse, setImageResponse] = useState(null);
-	const [imageWidth, setImageWidth] = useState<number>()
-	const [imageHeight, setImageHeight] = useState<number>()
 
 	const [doneUploadImage, setDoneUploadImage] = useState(false);
 	const [doneUploadMetadata, setDoneUploadMetadata] = useState(false);
@@ -112,6 +108,10 @@ export default function MintNFTScreen() {
         name: nameText,
         description: descriptionText,
         file_url: ipfsImageURL,
+		custom_fields: {
+			image_width: imageResponse.width,
+			image_height: imageResponse.height
+		},
       }
 	  if (externalURLText) metadata.external_url = externalURLText;
 
@@ -183,39 +183,6 @@ export default function MintNFTScreen() {
 		);
         console.log(error)
       }
-    }
-
-    const putMetadataToFirebase = async(web3provider: any) => {
-		console.log("Done minting, now putting into Firebase...");
-		
-		const request = await web3provider.getBlock(blockNumber);
-		// Get block timestamp
-		const time = Timestamp.fromDate(new Date(request.timestamp * 1000));
-		const address = walletConnector.accounts[0]
-
-		const firebase_data = {
-			image_metadata: {
-				width: imageWidth,
-				height: imageHeight,
-			},
-			marketplace_metadata: {
-				isListed: false,
-			},
-			nft_metadata: {
-				current_owner_address: address.toLowerCase(),
-				description: descriptionText,
-				external_url: externalURLText ? externalURLText : "",
-				image_name: nameText,
-				ipfs_image_url: ipfsImageURL,
-				ipfs_metadata_uri: ipfsMetadataURL,
-				mint_transaction_hash: mintTxHash,
-				minted_date: time,
-				original_owner_address: address.toLowerCase(),
-				token_id: tokenId,
-			},
-		}
-
-		await setDoc(doc(db, "NFT", "NFT-" + tokenId), firebase_data)
     }
 
 	const doChecks = () => {
@@ -318,7 +285,6 @@ export default function MintNFTScreen() {
 			await uploadImageToIPFS()
 			await uploadMetadataToIPFS()
 			await mintNFT(gasPrice, signer)
-			await putMetadataToFirebase(web3Provider)
 		} catch (error) {
 			Alert.alert("Error", error.toString(),
 			[
