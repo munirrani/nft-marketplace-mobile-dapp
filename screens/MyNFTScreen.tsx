@@ -71,7 +71,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		const NFTs = new Set(document.map(d => d.nft_metadata.token_id))
 		const arrayMerged = [...document, ...document2.filter(d => !NFTs.has(d.nft_metadata.token_id))]
 
-		NFT.length != arrayMerged.length && setNFT(arrayMerged)
+		setNFT(arrayMerged)
 		setIsLoading(false)
 	}
 	
