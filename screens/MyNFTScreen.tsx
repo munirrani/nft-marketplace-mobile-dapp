@@ -358,7 +358,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		}
 		
 		const updateListing = async(price: string) => {
-			const tokenId = item.nft_metadata_token_id
+			const tokenId = item.nft_metadata.token_id
 			console.log("Update listing with price " + price + " ETH")
 			await providerSetup()
 			
@@ -731,7 +731,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 		const mintedTime = new Date(item.nft_metadata.minted_date.seconds * 1000)
 		return (
-			<View key={item.nft_metadata_token_id} style={{flex:1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+			<View key={item.nft_metadata.token_id} style={{flex:1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
 				<Image 
 					source={{uri: item.nft_metadata.ipfs_image_url}}
 					style={{
@@ -757,7 +757,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 	const CardExpandedBody = (item: any) => {
 		return (
-			<View key={item.nft_metadata_token_id} style={{margin:15}}>
+			<View style={{margin:15}}>
 				<View style={{width:Dimensions.get('window').width - 45, position:'absolute', alignSelf:"center", backgroundColor:'#aaaaaa', opacity: .25, height:1, zIndex: 5,}} />
 				<Text style={{fontWeight: 'bold', marginTop: 10,}}>Description</Text>
 				<Text style={{marginTop: 10, textAlign:'justify'}}>{item.nft_metadata.description}</Text>

@@ -148,6 +148,7 @@ export default function MarketPlaceScreen({ navigation }) {
         <FlatList 
           data={NFT}
           style={{backgroundColor: 'white'}}
+          keyExtractor={(item, index) => item.nft_metadata.token_id}
           ListHeaderComponent={
               <Text style={{fontSize: 30, fontWeight: 'bold', alignSelf: 'center'}}>Piksel Marketplace</Text>
           }
