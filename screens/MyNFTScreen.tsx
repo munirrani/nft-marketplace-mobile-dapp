@@ -19,6 +19,7 @@ import { downloadFileFromUri, openDownloadedFile } from 'expo-downloads-manager'
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
+const NFTSmartContractABI = require('../contracts/abi/PhotoToken.json')
 const MarketplaceSmartContractAddress = '0x1DaEFC61Ef1d94ce351841Bde660F582D7c060Db'
 const MarketplaceSmartContractABI = require('../contracts/abi/NFTMarketPlace.json')
 
@@ -666,21 +667,109 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		console.log("status", status, error)
 	}
 
-	const BoughtComponent = ({item}) =>
+	const BoughtComponent = ({item}) => {
+
+		const [isStartingTransaction, setIsStartingTransaction] = useState(false)
+		const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false)
+
+		const [doneApproveTxHash, setDoneApproveTxHash] = useState<string>('')
+		const [doneApprove, setDoneApprove] = useState(false);
+
+		const approveNFTForResell = async(tokenId: number) => {
+			console.log("Approving NFT for resell", tokenId, "...")
+			await providerSetup()
+			
+			try {
+			  const NFTSmartContract = new Contract(NFTSmartContractAddress, NFTSmartContractABI, signer);
+			  const estimatedGasLimit = await NFTSmartContract.estimateGas.approve(MarketplaceSmartContractAddress, tokenId)
+	  
+			  await NFTSmartContract.approve(MarketplaceSmartContractAddress, tokenId, {
+				gasPrice: gasPrice,
+				gasLimit: estimatedGasLimit
+			  })
+			  .then((tx:any) => { 
+				setIsSubmittingTransaction(true)
+				return tx.wait()
+			  })
+			  .then((result: any) => {
+				console.log("Sales TX Result");
+				console.log(result)
+				setDoneApproveTxHash(result.transactionHash)
+				setDoneApprove(true)
+			  })
+	
+				setTimeout(async () => {
+					setIsStartingTransaction(false)
+					setIsSubmittingTransaction(false)
+					setDoneApprove(false)
+				}, 3000);
+
+			} catch (error) {
+				setIsStartingTransaction(false)
+				setIsSubmittingTransaction(false)
+				setDoneApprove(false)
+				Alert.alert("Error", error.toString(),
+				[
+					{ text: "Ok", style: "default", },
+				],
+					{ cancelable: true, }
+				);
+			  console.log(error)
+			}
+		}
+
+		return (
 		<View style={{width: '100%', marginTop: 10, alignItems: 'center', justifyContent: 'center'}}>
-			<Button 
-				title={"Download image from IPFS"}
-				style={{width: '100%', backgroundColor: 'green'}}
-				textStyle={{color: 'white'}}
-				onPress={() => downloadAndOpenFile(item.nft_metadata.ipfs_image_url, item.nft_metadata.image_name)}
-			/>
-			<View style={{marginTop: 20, marginBottom: 10}}>
+			<View style={{marginTop: 10, marginBottom: 20}}>
 				<Text style={{color: "#4989ad"}}
 					onPress={() => Linking.openURL("https://goerli.etherscan.io/token/" + NFTSmartContractAddress + "?a=" + item.nft_metadata.token_id)}>
 					View exchange history in Etherscan
 				</Text>
 			</View>
-		</View>
+			<Button 
+				title={"Download image from IPFS"}
+				style={{marginTop: 10, width: '100%', backgroundColor: "#333333"}}
+				textStyle={{color: 'white'}}
+				onPress={() => downloadAndOpenFile(item.nft_metadata.ipfs_image_url, item.nft_metadata.image_name)}
+			/>
+			<Button 
+				title={"Approve this marketplace for a resell"}
+				style={{marginTop: 10, width: '100%', backgroundColor: "#333333"}}
+				textStyle={{color: 'white'}}
+				onPress={() => { 
+					promptUser("Confirm approve for a resell in this marketplace?", 
+						() => {
+							setIsStartingTransaction(true)
+							approveNFTForResell(item.nft_metadata.token_id)
+						}
+					)
+				}}
+				
+			/>
+			<View style={{marginBottom: 10}}>
+				{ isStartingTransaction &&
+					<StatusMessage
+						content="Starting..." 
+						textStyle={{fontSize: 12}}
+					/>
+				}
+				{ isSubmittingTransaction &&
+					<StatusMessage
+						content="Submitting transaction. Waiting for 1 confirmation..." 
+						textStyle={{fontSize: 12}}
+					/>
+				}
+				{ doneApprove &&
+					<StatusMessage
+						content={"Approved!"}
+						txHash={doneApproveTxHash}
+						textStyle={{fontSize: 12}}
+						blueTextStyle={{fontSize: 12}}
+					/>
+				}
+			</View>
+		</View>)
+	}
 
 	const capsuleTextBarStyles = {
 		minted: {
