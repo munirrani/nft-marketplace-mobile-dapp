@@ -20,8 +20,6 @@ export default function MarketPlaceScreen({ navigation }) {
   const walletConnector = useWalletConnect();
   
   const [NFT, setNFTs] = useState([]);
-  const [walletAddress, setWalletAddress] = useState<string>("")
-  const [isWalletConnected, setIsWalletConnected] = useState(false)
   const [ethereumPriceInMyr, setEthereumPriceInMyr] = useState('')
   
   const getAllInfo = useCallback(async() => {
@@ -35,21 +33,12 @@ export default function MarketPlaceScreen({ navigation }) {
     return document
   }, [])
   
-  const checkWalletConnection = async() => {
-    const isConnected = walletConnector.connected
-    const account = walletConnector.accounts[0]
-    console.log(isConnected, account)
-    setIsWalletConnected(isConnected)
-    setWalletAddress(account)
-  }
-  
   useFocusEffect(
     React.useCallback(() => {
       let isActive = true;
       
       const fetchData = async () => {
         try {
-          await checkWalletConnection()
           const data = await getAllInfo()
           if (isActive) {
             setNFTs(data)
@@ -71,7 +60,7 @@ export default function MarketPlaceScreen({ navigation }) {
       return () => {
         isActive = false;
       };
-    }, [isWalletConnected, getAllInfo])
+    }, [walletConnector, getAllInfo])
   );
 
   async function incrementView(tokenId: number) {
@@ -100,7 +89,7 @@ export default function MarketPlaceScreen({ navigation }) {
             <Text numberOfLines={1} style={{fontWeight: 'bold', color: 'black', fontSize: 20}}>{props.name}</Text>
             <View style={{marginTop: 10, flexDirection: 'row', alignItems: 'center'}}>
               <Text style={{fontSize: 12, color: '#aaaaaa'}}>
-                { isWalletConnected && props.isUsersOwnNFT ? 
+                { props.isUsersOwnNFT ? 
                 "By You"
                   :
                 "By " + shortenAddress(props.seller)
@@ -127,7 +116,7 @@ export default function MarketPlaceScreen({ navigation }) {
           imgHeight={item.image_metadata.height}
           name={item.nft_metadata.image_name}
           price={item.marketplace_metadata.listing_price}
-          isUsersOwnNFT={isWalletConnected ? seller.toLowerCase() == walletAddress.toLowerCase() : false}
+          isUsersOwnNFT={walletConnector.connected ? seller.toLowerCase() == walletConnector.accounts[0].toLowerCase() : false}
           seller={seller}
           navigation={
             () => {
@@ -136,8 +125,6 @@ export default function MarketPlaceScreen({ navigation }) {
                 nft_metadata: item.nft_metadata, 
                 marketplace_metadata: item.marketplace_metadata, 
                 image_metadata: item.image_metadata,
-                wallet_address: walletAddress,
-                is_users_own_nft: isWalletConnected ? seller.toLowerCase() == walletAddress.toLowerCase() : false,
                 ethereum_price: ethereumPriceInMyr
               })
             }

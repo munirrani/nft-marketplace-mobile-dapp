@@ -1,6 +1,6 @@
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
 import WalletConnectProvider from '@walletconnect/web3-provider';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView, Linking, Alert} from 'react-native';
 import ReadMore from 'react-native-read-more-text';
 import Button from '../components/Button';
@@ -11,7 +11,6 @@ import { Contract, providers, utils } from 'ethers';
 import StatusMessage from '../components/StatusMessage';
 import {getStatusBarHeight} from "react-native-status-bar-height";
 import { StatusBar } from 'expo-status-bar';
-import { useFocusEffect } from '@react-navigation/native';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const MarketplaceSmartContractAddress = '0x1DaEFC61Ef1d94ce351841Bde660F582D7c060Db'
@@ -23,9 +22,7 @@ const monthNames = ["January", "February", "March", "April", "May", "June",
 
 export default function NFTDetailsScreen({ route, navigation }: RootStackScreenProps<'NFTDetails'>) {
 
-  const { nft_metadata, marketplace_metadata, image_metadata, wallet_address, is_users_own_nft, ethereum_price } = route.params;
-
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const { nft_metadata, marketplace_metadata, image_metadata, ethereum_price } = route.params;
 
   const [isStartingTransaction, setIsStartingTransaction] = useState(false);
 	const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false);
@@ -33,6 +30,11 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   const [buyingTxHash, setBuyingTxHash] = useState("")
 
   const walletConnector = useWalletConnect();
+
+  const connectWallet = useCallback(() => {
+    return walletConnector.connect();
+  }, [walletConnector]);
+
   const seller = nft_metadata.owner_history[nft_metadata.owner_history.length - 1]
 
   var signer;
@@ -65,35 +67,6 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
     
     gasPrice = await web3Provider.getGasPrice()
   }
-
-  const checkWalletConnection = async() => {
-    const isConnected = walletConnector.connected
-    setIsWalletConnected(isConnected)
-  }
-
-  useEffect(() => {
-    checkWalletConnection()
-  }, [isWalletConnected])
-
-  useFocusEffect(
-    React.useCallback(() => {
-      let isActive = true;
-      
-      const checkConnection = async () => {
-        try {
-          if (isActive) {
-            await checkWalletConnection()
-          }
-        } catch (e) {
-        }
-      };
-      checkConnection();
-
-      return () => {
-        isActive = false;
-      };
-    }, [isWalletConnected])
-  );
 
   const buyNFT = async () => {
     console.log("Buying NFT tokenId" + nft_metadata.token_id)
@@ -194,7 +167,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
           </View>
           <View style={{marginVertical:10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
               <Text style={{color: '#555555'}}>
-                    { is_users_own_nft ? 
+                    { walletConnector.connected && walletConnector.accounts[0].toLowerCase() == seller.toLowerCase() ? 
                       "By You" 
                         : 
                       "By " + shortenAddress(seller)}
@@ -227,23 +200,27 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
           }
           <Text style={{fontWeight: 'bold', marginTop: 10}}>ID</Text>
           <Text style={{marginTop: 10}}>{nft_metadata.token_id}</Text>
-          { !is_users_own_nft &&
+          { walletConnector.connected ?
+              walletConnector.accounts[0].toLowerCase() != seller.toLowerCase() &&
               <Button 
-                title={isWalletConnected ? doneBuying ? "Bought" : "Buy" : "Connect wallet to buy"}
+                title={doneBuying ? "Bought" : "Buy"}
                 style={{flexGrow: 1, backgroundColor: doneBuying ? '#dddddd' : 'green', marginTop:20}}
                 textStyle={{fontSize: 14, color: 'white'}}
-                onPress={async() => {
-                  if (isWalletConnected) {
+                onPress={() => {
                     promptUser("Confirm buy?", 
                       () => {
                         setIsStartingTransaction(true)
                         buyNFT()
                       }
                     )
-                  } else {
-                    navigation.pop()
-                  }
                 }}
+              />
+                :
+              <Button 
+                title={"Connect wallet to buy"}
+                style={{flexGrow: 1, backgroundColor: 'green', marginTop:20}}
+                textStyle={{fontSize: 14, color: 'white'}}
+                onPress={connectWallet}
               />
           }
           <View style={{flexGrow: 1, marginTop: 20}}>

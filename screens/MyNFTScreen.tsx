@@ -31,8 +31,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	const [NFT, setNFT] = useState([]);
 	
 	// Wallet
-	const [isWalletConnected, setIsWalletConnected] = useState(false);
-	const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('')
 	const [isLoading, setIsLoading] = useState(false)
 	const [hasNFT, setHasNFT] = useState(false)
 	
@@ -44,18 +42,18 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	const getAllInfo = async() => {
 		setIsLoading(true)
 
-		const document3 = []
-		const q3 = query(collection(db, "NFT"), 
-			where("nft_metadata.owner_history", "array-contains", currentWalletAddress.toLowerCase())
+		const document = []
+		const q = query(collection(db, "NFT"), 
+			where("nft_metadata.owner_history", "array-contains", walletConnector.accounts[0].toLowerCase())
 		)
-		const querySnapshot3 = await getDocs(q3)
-		querySnapshot3.forEach((doc) => {
+		const querySnapshot = await getDocs(q)
+		querySnapshot.forEach((doc) => {
 			const data = doc.data()
-			document3.push(data)
+			document.push(data)
 		})
-		document3.length > 0 && setHasNFT(true)
+		document.length > 0 && setHasNFT(true)
 
-		setNFT(document3)
+		setNFT(document)
 		setIsLoading(false)
 	}
 	
@@ -88,9 +86,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 	const checkWalletAndFetchInfo = async() => {	
 		const isConnected = walletConnector.connected
-		const account = walletConnector.accounts[0]
-		setIsWalletConnected(isConnected)
-		setCurrentWalletAddress(isConnected ? account : "")
 		if (isConnected)  {
 			await getAllInfo()
 		} else {
@@ -106,16 +101,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		  const fetchData = async () => {
 			try {
 			  if (isActive) {
-				const isConnected = walletConnector.connected
-				const account = walletConnector.accounts[0]
-				setIsWalletConnected(isConnected)
-				setCurrentWalletAddress(isConnected ? account : "")
-				if (isConnected) {
-					await getAllInfo()
-				} else {
-					setNFT([])
-					setHasNFT(false)
-				}
+				checkWalletAndFetchInfo()
 			  }
 			} catch (e) {
 			}
@@ -125,7 +111,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		  return () => {
 			isActive = false;
 		  };
-		}, [isWalletConnected])
+		}, [walletConnector])
 	  );
 
 	/*
@@ -137,7 +123,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	*/
 
 	const AddressText = (props: any) => {
-		const isUsersAddress = currentWalletAddress.toLowerCase() === props.text.toLowerCase()
+		const isUsersAddress = walletConnector.accounts[0].toLowerCase() === props.text.toLowerCase()
 		return (
 			<View style={[{flexDirection: 'row'}, props.style]}>
 				{ isUsersAddress &&
@@ -512,7 +498,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			
 			try {
 			  const MarketPlaceContract = new Contract(MarketplaceSmartContractAddress, MarketplaceSmartContractABI, signer);
-			  const call = await MarketPlaceContract.getProceeds(currentWalletAddress)
+			  const call = await MarketPlaceContract.getProceeds(walletConnector.accounts[0])
 			  const isAvailable = call.toString() != "0"
 			  setIsSalesAvailable(isAvailable)
 			  if (isAvailable) {
@@ -786,13 +772,13 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		const marketplace = item.marketplace_metadata
 		const owner_history = item.nft_metadata.owner_history
 		const latest_owner = owner_history[owner_history.length - 1]
-		if (marketplace.isListed && latest_owner.toLowerCase() == currentWalletAddress.toLowerCase()) { // if is listed
+		if (marketplace.isListed && latest_owner.toLowerCase() == walletConnector.accounts[0].toLowerCase()) { // if is listed
 				return 'listed'
 		} else { // if not listed
 			if (owner_history.length == 1) {
 				return 'minted'
 			} else { // array size > 1, exchange have taken place.
-				if (latest_owner.toLowerCase() == currentWalletAddress.toLowerCase()) {
+				if (latest_owner.toLowerCase() == walletConnector.accounts[0].toLowerCase()) {
 					return 'bought'
 				} else {
 					return 'sold'
@@ -876,21 +862,11 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			<SafeAreaView style={{backgroundColor: "#ffffff"}} />
 			<View style={{padding:15, width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
 				<Text style={{fontSize: 25, fontWeight: 'bold'}}>My Photo</Text>
-				<WalletLoginButton customOnPress={()=> {
-					if (isWalletConnected)  {
-						console.log("Wallet connected, so disconnecting wallet")
-						walletConnector.killSession()
-						setIsWalletConnected(false)
-					} else {
-						console.log("Wallet unconnected, so connecting wallet")
-						walletConnector.connect()
-					}
-				}} />
+				<WalletLoginButton />
         	</View>
-			{ !isWalletConnected ?
+			{ !walletConnector.connected ?
 				<View style={{flex:1, justifyContent: 'center', alignItems: 'center'}}>
 					<Text style={{fontSize:21, color: '#BBBBBB', }}>Wallet not Connected</Text>
-					<Text style={{marginTop: 10, fontSize: 14, color: "#82bee0"}} onPress={checkWalletAndFetchInfo}>Refresh</Text>
 				</View>
 					:
 				<View style={{flex: 1, padding: 15}}>

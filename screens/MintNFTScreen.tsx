@@ -11,7 +11,6 @@ import { INFURA_ID, NFTPORT_AUTH} from '@env';
 import * as ImagePicker from 'expo-image-picker';
 import { getStatusBarHeight } from 'react-native-status-bar-height';
 import WalletLoginButton from '../components/WalletLoginButton';
-import { useFocusEffect } from '@react-navigation/native';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const NFTSmartContractABI = require('../contracts/abi/PhotoToken.json')
@@ -19,7 +18,6 @@ const NFTSmartContractABI = require('../contracts/abi/PhotoToken.json')
 export default function MintNFTScreen() {
 
 	// Wallet
-	const [isWalletConnected, setIsWalletConnected] = useState(false);
 	const [isStartingTransaction, setIsStartingMinting] = useState(false);
 	const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false);
 
@@ -37,21 +35,6 @@ export default function MintNFTScreen() {
 
 	var ipfsImageURL;
 	var ipfsMetadataURL;
-	
-	const checkWalletConnection = async() => {
-		const isConnected = walletConnector.connected
-		setIsWalletConnected(isConnected)
-	}
-	  
-	useFocusEffect(
-		React.useCallback(() => {
-			let isActive = true;
-			isActive && checkWalletConnection()
-			return () => {
-				isActive = false;
-			};
-		}, [isWalletConnected])
-	);
 
 
 	const handleImageSelection = async() => {
@@ -204,7 +187,7 @@ export default function MintNFTScreen() {
 			return true
 		}
 
-		if (!isWalletConnected) {
+		if (!walletConnector.connected) {
 			Alert.alert("Error", "Wallet is not connected.",
 			[
 				{
@@ -332,17 +315,7 @@ export default function MintNFTScreen() {
 	<SafeAreaView style={{flex: 1, paddingTop: getStatusBarHeight()}}>
 		<View style={{padding:15, width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
 			<Text style={{fontSize: 25, fontWeight: 'bold'}}>Mint Photo</Text>
-			<WalletLoginButton customOnPress={()=> {
-				if (isWalletConnected)  {
-					console.log("Wallet connected, so disconnecting wallet")
-					walletConnector.killSession()
-					setIsWalletConnected(false)
-					clearScreen()
-				} else {
-					console.log("Wallet unconnected, so connecting wallet")
-					walletConnector.connect()
-				}
-				}} />
+			<WalletLoginButton />
 		</View>
       <ScrollView style={{flex:1,backgroundColor: "#ffffff"}}>
         <View style={styles.container}>
