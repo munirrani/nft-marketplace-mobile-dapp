@@ -1,5 +1,5 @@
-import React, { useState, useEffect, } from 'react';
-import { StyleSheet, Image, ScrollView, Alert, TouchableOpacity, ImageBackground, Text, SafeAreaView } from 'react-native';
+import React, { useState, useEffect, useContext, } from 'react';
+import { StyleSheet, Image, ScrollView, Alert, TouchableOpacity, ImageBackground, Text, SafeAreaView, Linking } from 'react-native';
 import { View } from '../components/Themed';
 import {AutoGrowingTextInput} from 'react-native-autogrow-textinput';
 import Button from '../components/Button';
@@ -11,6 +11,7 @@ import { INFURA_ID, NFTPORT_AUTH} from '@env';
 import * as ImagePicker from 'expo-image-picker';
 import { getStatusBarHeight } from 'react-native-status-bar-height';
 import WalletLoginButton from '../components/WalletLoginButton';
+import { Web3Context } from '../util/Web3ContextProvider';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const NFTSmartContractABI = require('../contracts/abi/PhotoToken.json')
@@ -28,10 +29,10 @@ export default function MintNFTScreen() {
 
 	const [doneUploadImage, setDoneUploadImage] = useState(false);
 	const [doneUploadMetadata, setDoneUploadMetadata] = useState(false);
-	const [doneMinting, setDoneMinting] = useState(false);
-	const [mintTxHash, setMintTxHash] = useState<string>('')
 
     const walletConnector = useWalletConnect();
+
+	const { shouldRefresh, setShouldRefresh } = useContext(Web3Context)
 
 	var ipfsImageURL;
 	var ipfsMetadataURL;
@@ -139,6 +140,25 @@ export default function MintNFTScreen() {
 		}
     }
 
+	const notifyUserTxComplete = (message: string, transactionHash: string) =>
+	Alert.alert("",
+		message,
+		[{
+			text: "Verify in Etherscan",
+			onPress: () => {
+				clearScreen()
+				setShouldRefresh(!shouldRefresh)
+				Linking.openURL('https://goerli.etherscan.io/search?f=0&q=' + transactionHash)
+			}
+		}, {
+			text: "OK",
+			onPress: () => { 
+				clearScreen()
+				setShouldRefresh(!shouldRefresh)
+			}
+		}],
+	)
+
     const mintNFT = async(gasPrice: BigNumber, signer: any) => {
       console.log("Minting...")
       try {
@@ -156,11 +176,9 @@ export default function MintNFTScreen() {
         .then((result:any) => {
 			console.log("Minting TX Result");
 			console.log(result);
-			tokenId = parseInt(result.events[0].topics[3])
-			setMintTxHash(result.transactionHash)
-			blockNumber = result.blockNumber
-			setDoneMinting(true)
+			notifyUserTxComplete("Picture minted", result.transactionHash)
         })
+		
       } catch (error) {
 		setIsStartingMinting(false)
 		setDoneUploadImage(false)
@@ -177,6 +195,7 @@ export default function MintNFTScreen() {
     }
 
 	const doChecks = () => {
+		// TODO FIX URL CHECKING
 		function isValidHttpUrl(string: string) {
 			let url;
 			try {
@@ -297,7 +316,6 @@ export default function MintNFTScreen() {
 		setImageResponse(null)
 		setDoneUploadImage(false)
 		setDoneUploadMetadata(false)
-		setDoneMinting(false)
 	}
 
 	const promptUser = (message: string, action: any) =>
@@ -421,18 +439,7 @@ export default function MintNFTScreen() {
 				{ isSubmittingTransaction && 
 					<StatusMessage content="Submitting transaction. Waiting for 1 confirmation..." />
 				}
-				{ doneMinting && 
-					<StatusMessage
-						content="Picture minted" 
-						txHash={mintTxHash}
-					/>
-				}
 			</View>
-			{ doneMinting && 
-				<TouchableOpacity style={{marginVertical: 20, alignItems: 'center', justifyContent: 'center'}} onPress={clearScreen}>
-					<Text style={{color: '#4989ad', fontSize: 15,}}>Clear screen</Text>
-				</TouchableOpacity>
-			}
           </View>
         </View>
       </ScrollView>

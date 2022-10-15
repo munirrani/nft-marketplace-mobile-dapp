@@ -1,6 +1,6 @@
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
 import WalletConnectProvider from '@walletconnect/web3-provider';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useContext, useRef, useState } from 'react';
 import { StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView, Linking, Alert} from 'react-native';
 import ReadMore from 'react-native-read-more-text';
 import Button from '../components/Button';
@@ -11,6 +11,7 @@ import { Contract, providers, utils } from 'ethers';
 import StatusMessage from '../components/StatusMessage';
 import {getStatusBarHeight} from "react-native-status-bar-height";
 import { StatusBar } from 'expo-status-bar';
+import { Web3Context } from '../util/Web3ContextProvider';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const MarketplaceSmartContractAddress = '0x1DaEFC61Ef1d94ce351841Bde660F582D7c060Db'
@@ -27,9 +28,12 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   const [isStartingTransaction, setIsStartingTransaction] = useState(false);
 	const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false);
   const [doneBuying, setDoneBuying] = useState(false)
-  const [buyingTxHash, setBuyingTxHash] = useState("")
 
   const walletConnector = useWalletConnect();
+
+  const scrollRef = useRef()
+
+  const { notifyUserTxComplete } = useContext(Web3Context)
 
   const connectWallet = useCallback(() => {
     return walletConnector.connect();
@@ -89,9 +93,11 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 		  .then((result: any) => {
         console.log("Buying TX Result");
         console.log(result)
-        setBuyingTxHash(result.events[0].transactionHash)
+        setDoneBuying(true)
+        notifyUserTxComplete("Transaction completed", result.events[0].transactionHash)
 		  })
-      setDoneBuying(true)
+      setIsStartingTransaction(false)
+      setIsSubmittingTransaction(false)
     } catch (error) {
       setIsStartingTransaction(false)
       setIsSubmittingTransaction(false)
@@ -140,7 +146,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 
   return (<>
     <StatusBar style="light" />
-    <ScrollView style={{backgroundColor: 'white'}}>
+    <ScrollView ref={scrollRef} onContentSizeChange={() => scrollRef.current.scrollToEnd()} style={{backgroundColor: 'white'}}>
       <TouchableOpacity style={{left: 10, top: getStatusBarHeight() + 10, position: 'absolute', zIndex: 2}} onPress={() => navigation.pop()}>
         <Image
             source={require('../assets/images/back-icon.png')}
@@ -223,18 +229,12 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
                 onPress={connectWallet}
               />
           }
-          <View style={{flexGrow: 1, marginTop: 20}}>
+          <View style={{flexGrow: 1, marginTop: 10}}>
             { isStartingTransaction && 
               <StatusMessage content="Starting..." />
             }
             { isSubmittingTransaction && 
               <StatusMessage content="Submitting transaction. Waiting for 1 confirmation..." />
-            }
-            { doneBuying && 
-              <StatusMessage
-                content="Photo bought!" 
-                txHash={buyingTxHash}
-              />
             }
           </View>
         </View>

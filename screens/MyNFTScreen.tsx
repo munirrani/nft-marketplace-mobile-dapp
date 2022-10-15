@@ -13,10 +13,10 @@ import {AccordionList} from 'react-native-accordion-list-view';
 import CapsuleTextBar from '../components/CapsuleTextBar';
 import Button from '../components/Button';
 import { INFURA_ID } from '@env';
-import { useFocusEffect } from '@react-navigation/native';
 import WalletLoginButton from '../components/WalletLoginButton';
 import { downloadFileFromUri, openDownloadedFile } from 'expo-downloads-manager';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Web3Context } from '../util/Web3ContextProvider';
 
 const NFTSmartContractAddress = "0xc9a253097212a55a66e5667e2f4ba4284e5890de"
 const NFTSmartContractABI = require('../contracts/abi/PhotoToken.json')
@@ -33,6 +33,8 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	// Wallet
 	const [isLoading, setIsLoading] = useState(false)
 	const [hasNFT, setHasNFT] = useState(false)
+
+	const { shouldRefresh, ethereumPriceInMyr, setEthereumPriceInMyr, notifyUserTxComplete } = useContext(Web3Context)
 	
 	const walletConnector = useWalletConnect();
 
@@ -84,35 +86,34 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		gasPrice = await web3Provider.getGasPrice()
 	}
 
-	const checkWalletAndFetchInfo = async() => {	
-		const isConnected = walletConnector.connected
-		if (isConnected)  {
-			await getAllInfo()
+	useEffect(() => {
+		const getPrice = async() => 
+        fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=myr")
+        .then(res => res.json())
+        .then(data => {
+          setEthereumPriceInMyr(data.ethereum.myr)
+      	})
+        
+		if (walletConnector.connected)  {
+			getAllInfo()
 		} else {
 			setNFT([])
 			setHasNFT(false)
 		}
-	}
 
-	useFocusEffect(
-		React.useCallback(() => {
-		  let isActive = true;
-		  
-		  const fetchData = async () => {
-			try {
-			  if (isActive) {
-				checkWalletAndFetchInfo()
-			  }
-			} catch (e) {
-			}
-		  };
-		  fetchData();
-	  
-		  return () => {
-			isActive = false;
-		  };
-		}, [walletConnector])
-	  );
+		getPrice()
+	}, [walletConnector, shouldRefresh])
+
+	const promptUser = (message: string, action: any) =>
+		Alert.alert(
+			"Confirmation",
+			message, [{
+				text: "Cancel",
+				style: "cancel"
+			}, { 
+				text: "OK", onPress: action 
+			}]
+		);
 
 	/*
 	*
@@ -150,8 +151,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 		const [isStartingTransaction, setIsStartingTransaction] = useState(false)
 		const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false)
-		const [doneListing, setDoneListing] = useState(false)
-		const [listingTxHash, setListingTxHash] = useState('')
 
 		const listInMarketPlace = async() => {
 			const tokenId = item.nft_metadata.token_id
@@ -173,23 +172,32 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			  .then((result: any) => {
 				console.log("Marketplace Listing TX Result");
 				console.log(result)
-				setListingTxHash(result.events[0].transactionHash)
-				setDoneListing(true)
+				notifyUserTxComplete("Picture listed in Marketplace", result.events[0].transactionHash)
+				setIsStartingTransaction(false)
+				setIsSubmittingTransaction(false)
 			  })
 	
 			  console.log("Done listing")
-		  
 			} catch (error) {
 				setIsStartingTransaction(false)
 				setIsSubmittingTransaction(false)
-				setDoneListing(false)
 				onChangePriceInEtherText("")
-				Alert.alert("Error", error.toString(),
-				[
-					{ text: "Ok", style: "default", },
-				],
-					{ cancelable: true, }
-				);
+				const errorMessage = error.toString()
+				if (errorMessage.includes("UNPREDICTABLE_GAS_LIMIT")) {
+					Alert.alert("Error", "You need to approve this marketplace for a resell",
+					[
+						{ text: "Ok", style: "default", },
+					],
+						{ cancelable: true, }
+					);
+				} else {
+					Alert.alert("Error", errorMessage,
+					[
+						{ text: "Ok", style: "default", },
+					],
+						{ cancelable: true, }
+					);
+				}
 			  console.log(error)
 			}
 	  
@@ -197,7 +205,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 		return (
 		<View>
-			<View style={{flexDirection: 'row', alignItems: 'center', marginTop: 10}}>					
+			<View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10}}>					
 				<Image 
 					source={require('../assets/images/Ethereum-Logo-PNG.png')} 
 					style={{
@@ -206,7 +214,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						marginRight: 10,
 						tintColor: '#555555'
 					}}
-					/>
+				/>
 				<TextInput 
 					onChangeText={onChangePriceInEtherText}
 					value={priceInEtherText}
@@ -216,14 +224,14 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						borderRadius: 5,
 						borderColor: "#DDDDDD",
 						padding: 10,
-						flex: 5,
+						flex: 2,
 					}}
 					placeholder="Price in Ether"
 					multiline={false}
-					/>
+				/>
 				<Button 
 					title={"Sell"}
-					style={{flex: 2, marginLeft: 10, padding: 7, backgroundColor: 'green'}}
+					style={{flex: 1, marginLeft: 10, padding: 10, backgroundColor: 'green'}}
 					textStyle={{fontSize: 12, color: 'white'}}
 					onPress={() => {
 						promptUser(priceInEtherText + " ETH" + "\n\nConfirm price?", 
@@ -235,6 +243,11 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					}}
 					/>
 			</View>
+			{!!priceInEtherText && !isStartingTransaction &&
+				<View style={{marginTop: 10}}>
+					<Text style={{marginLeft: 40, color: "#bbbbbb", fontSize: 12,}}>= RM {(parseFloat(ethereumPriceInMyr) * parseFloat(priceInEtherText)).toFixed(2)}</Text>
+				</View>
+			}
 			<View>
 				{ isStartingTransaction && 
 					<StatusMessage 
@@ -249,29 +262,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						textStyle={{fontSize: 12}}
 					/>
 				}
-				{ doneListing &&
-					<StatusMessage
-						content="Listed into Marketplace" 
-						txHash={listingTxHash}
-						textStyle={{fontSize: 12}}
-						blueTextStyle={{fontSize: 12}}
-					/>
-				}
 			</View>
 		</View>)
 	}
-	
-	const promptUser = (message: string, action: any) =>
-		Alert.alert(
-			"Confirmation",
-			message, [{
-				text: "Cancel",
-				style: "cancel"
-			}, { 
-				text: "OK", onPress: action 
-			}
-		]
-	);
 
 	const ListingEditComponent = ({item}) => {
 
@@ -280,12 +273,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 		const [inPriceEditMode, setInPriceEditMode] = useState(false)
 		const [listedChangePriceText, setListedChangePriceText] = useState<string>()
-
-		const [doneUpdateListing, setDoneUpdateListing] = useState(false)
-		const [updateListingTxHash, setUpdateListingTxHash] = useState<string>('')
-		
-		const [doneCancelListing, setDoneCancelListing] = useState(false)
-		const [cancelListingTxHash, setCancelListingTxHash] = useState<string>('')
 
 		const cancelListing = async() => {
 			const tokenId = item.nft_metadata.token_id
@@ -307,16 +294,15 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				.then((result: any) => {
 				  console.log("Cancel Listing TX Result");
 				  console.log(result)
-				  setCancelListingTxHash(result.events[0].transactionHash)
-				  setDoneCancelListing(true)
+				  notifyUserTxComplete("Listing canceled", result.events[0].transactionHash)
+				  setIsStartingTransaction(false)
+				  setIsSubmittingTransaction(false)
 				})
 	  
 				console.log("Done cancel listing")
-			
 			} catch (error) {
 				setIsStartingTransaction(false)
 				setIsSubmittingTransaction(false)
-				setDoneCancelListing(false)
 				Alert.alert("Error", error.toString(),
 				[
 					{ text: "Ok", style: "default", },
@@ -347,18 +333,15 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				.then((result: any) => {
 				  console.log("Update Listing TX Result");
 				  console.log(result)
-				  setUpdateListingTxHash(result.events[0].transactionHash)
-				  setDoneUpdateListing(true)
+				  notifyUserTxComplete("Price updated", result.events[0].transactionHash)
+				  setIsStartingTransaction(false)
+				  setIsSubmittingTransaction(false)
 				})
 	  
 				console.log("Done update listing")
-				setInPriceEditMode(false) // close edit mode
-			
 			} catch (error) {
 				setIsStartingTransaction(false)
 				setIsSubmittingTransaction(false)
-				setDoneUpdateListing(false)
-				setInPriceEditMode(false)
 				Alert.alert("Error", error.toString(),
 				[
 					{ text: "Ok", style: "default", },
@@ -398,9 +381,17 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						multiline={false}
 					/>
 						:
+					isStartingTransaction ?
+					<Text style={{fontSize: 14}}>{listedChangePriceText} ETH (Processing)</Text>
+						:
 					<Text style={{fontSize: 14}}>{item.marketplace_metadata.listing_price} ETH</Text>
 				}
 			</View>
+			{!!listedChangePriceText && inPriceEditMode && 
+				<View style={{marginTop: 10}}>
+					<Text style={{marginLeft: 25, color: "#bbbbbb", fontSize: 12,}}>= RM {(parseFloat(ethereumPriceInMyr) * parseFloat(listedChangePriceText)).toFixed(2)}</Text>
+				</View>
+			}
 			<View style={{marginTop: 20, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center'}}>
 				<Button 
 					title={inPriceEditMode ? "Close" : "Edit Price"}
@@ -412,9 +403,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 							setListedChangePriceText(item.marketplace_metadata.listing_price)
 						} else {
 							setInPriceEditMode(false)
-							setIsStartingTransaction(false)
-							setIsSubmittingTransaction(false)
-							setDoneUpdateListing(false)
 						}
 					}}
 					/>
@@ -439,6 +427,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 								promptUser(listedChangePriceText + " ETH" + "\n\nConfirm price?", 
 									() => {
 										setIsStartingTransaction(true)
+										setInPriceEditMode(false)
 										updateListing(listedChangePriceText)
 									}
 								)
@@ -460,22 +449,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						textStyle={{fontSize: 12}}
 					/>
 				}
-				{ doneUpdateListing &&
-					<StatusMessage
-						content={"Done updating price"}
-						txHash={updateListingTxHash}
-						textStyle={{fontSize: 12}}
-						blueTextStyle={{fontSize: 12}}
-					/>
-				}
-				{ doneCancelListing &&
-					<StatusMessage
-						content={"Done cancel listing"}
-						txHash={cancelListingTxHash}
-						textStyle={{fontSize: 12}}
-						blueTextStyle={{fontSize: 12}}
-					/>
-				}
 			</View>
 		</View>
 		)
@@ -488,9 +461,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 		// Status - Sold
 		const [isSalesAvailable, setIsSalesAvailable] = useState(false)
-		const [doneWithdrawSales, setDoneWithdrawSales] = useState(false);
-		
-		const [withdrawSalesTxHash, setWithdrawSalesTxHash] = useState<string>('')
 
 		const getProceeds = async() => {
 			console.log("Checking withdraw availability")
@@ -552,19 +522,14 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			  .then((result: any) => {
 				console.log("Sales TX Result");
 				console.log(result)
-				setWithdrawSalesTxHash(result.transactionHash)
-				setDoneWithdrawSales(true)
-			  })
-	
-			  setTimeout(async () => {
+				notifyUserTxComplete("Sales withdrawn", result.transactionHash)
 				setIsStartingTransaction(false)
 				setIsSubmittingTransaction(false)
-				setDoneWithdrawSales(false)
-			}, 3000);
+			  })
+
 			} catch (error) {
 				setIsStartingTransaction(false)
 				setIsSubmittingTransaction(false)
-				setDoneWithdrawSales(false)
 				Alert.alert("Error", error.toString(),
 				[
 					{ text: "Ok", style: "default", },
@@ -615,14 +580,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						textStyle={{fontSize: 12}}
 					/>
 				}
-				{ doneWithdrawSales &&
-					<StatusMessage
-						content={"Done withdrawing"}
-						txHash={withdrawSalesTxHash}
-						textStyle={{fontSize: 12}}
-						blueTextStyle={{fontSize: 12}}
-					/>
-				}
 			</View>
 		</View>)
 	}
@@ -640,9 +597,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 		const [isStartingTransaction, setIsStartingTransaction] = useState(false)
 		const [isSubmittingTransaction, setIsSubmittingTransaction] = useState(false)
-
-		const [doneApproveTxHash, setDoneApproveTxHash] = useState<string>('')
-		const [doneApprove, setDoneApprove] = useState(false);
 
 		const approveNFTForResell = async(tokenId: number) => {
 			console.log("Approving NFT for resell", tokenId, "...")
@@ -663,20 +617,14 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			  .then((result: any) => {
 				console.log("Sales TX Result");
 				console.log(result)
-				setDoneApproveTxHash(result.transactionHash)
-				setDoneApprove(true)
+				notifyUserTxComplete("Marketplace approved", result.transactionHash)
+				setIsStartingTransaction(false)
+				setIsSubmittingTransaction(false)
 			  })
-	
-				setTimeout(async () => {
-					setIsStartingTransaction(false)
-					setIsSubmittingTransaction(false)
-					setDoneApprove(false)
-				}, 3000);
 
 			} catch (error) {
 				setIsStartingTransaction(false)
 				setIsSubmittingTransaction(false)
-				setDoneApprove(false)
 				Alert.alert("Error", error.toString(),
 				[
 					{ text: "Ok", style: "default", },
@@ -713,9 +661,8 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						}
 					)
 				}}
-				
 			/>
-			<View style={{marginBottom: 10}}>
+			<View style={{marginBottom: 10, justifyContent: 'flex-start'}}>
 				{ isStartingTransaction &&
 					<StatusMessage
 						content="Starting..." 
@@ -726,14 +673,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					<StatusMessage
 						content="Submitting transaction. Waiting for 1 confirmation..." 
 						textStyle={{fontSize: 12}}
-					/>
-				}
-				{ doneApprove &&
-					<StatusMessage
-						content={"Approved!"}
-						txHash={doneApproveTxHash}
-						textStyle={{fontSize: 12}}
-						blueTextStyle={{fontSize: 12}}
 					/>
 				}
 			</View>

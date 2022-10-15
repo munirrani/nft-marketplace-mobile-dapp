@@ -1,12 +1,11 @@
 import { Dimensions, FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-import { useFocusEffect } from '@react-navigation/native';
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
 import { StatusBar } from 'expo-status-bar';
 import { collection, doc, getDocs, increment, query, updateDoc, where } from 'firebase/firestore';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { getStatusBarHeight } from "react-native-status-bar-height";
 import { db } from '../db-config';
+import { Web3Context } from '../util/Web3ContextProvider';
 
 const shortenAddress = (address: string) => {
   return `${address.slice(0, 6)}...${address.slice(
@@ -20,7 +19,8 @@ export default function MarketPlaceScreen({ navigation }) {
   const walletConnector = useWalletConnect();
   
   const [NFT, setNFTs] = useState([]);
-  const [ethereumPriceInMyr, setEthereumPriceInMyr] = useState('')
+
+  const { shouldRefresh, ethereumPriceInMyr, setEthereumPriceInMyr } = useContext(Web3Context)
   
   const getAllInfo = useCallback(async() => {
     const q = query(collection(db, "NFT"), where("marketplace_metadata.isListed", "==", true));
@@ -30,38 +30,20 @@ export default function MarketPlaceScreen({ navigation }) {
       const data = doc.data()
       document.push(data)
     })
-    return document
+    setNFTs(document)
   }, [])
-  
-  useFocusEffect(
-    React.useCallback(() => {
-      let isActive = true;
-      
-      const fetchData = async () => {
-        try {
-          const data = await getAllInfo()
-          if (isActive) {
-            setNFTs(data)
-          }
-        } catch (e) {
-        }
-      };
-      
+
+  useEffect(() => {
       const getPrice = async() => 
         fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=myr")
         .then(res => res.json())
         .then(data => {
           setEthereumPriceInMyr(data.ethereum.myr)
-        })
+      })
         
-      fetchData();
+      getAllInfo()
       getPrice()
-    
-      return () => {
-        isActive = false;
-      };
-    }, [walletConnector, getAllInfo])
-  );
+    }, [walletConnector, shouldRefresh])
 
   async function incrementView(tokenId: number) {
     await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
