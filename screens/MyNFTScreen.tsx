@@ -596,12 +596,12 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					View exchange history in Etherscan
 				</Text>
 				<Button 
-					title={"Check withdraw availability"}
-					style={{marginTop: 10, flex: 2, backgroundColor: "#333333"}}
-					textStyle={{fontSize: 12, color: 'white'}}
-					onPress={() => {
-						getProceeds()
-					}}
+				title={"Check withdraw availability"}
+				style={{marginTop: 10, flex: 2, backgroundColor: "#333333"}}
+				textStyle={{fontSize: 12, color: 'white'}}
+				onPress={() => {
+					getProceeds()
+				}}
 				/>
 				{
 				isSalesAvailable &&
@@ -786,13 +786,11 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		const marketplace = item.marketplace_metadata
 		const owner_history = item.nft_metadata.owner_history
 		const latest_owner = owner_history[owner_history.length - 1]
-		const original_owner = owner_history[0]
 		if (marketplace.isListed && latest_owner.toLowerCase() == currentWalletAddress.toLowerCase()) { // if is listed
 				return 'listed'
 		} else { // if not listed
 			if (owner_history.length == 1) {
-				if (original_owner.toLowerCase() == currentWalletAddress.toLowerCase())
-					return 'minted'
+				return 'minted'
 			} else { // array size > 1, exchange have taken place.
 				if (latest_owner.toLowerCase() == currentWalletAddress.toLowerCase()) {
 					return 'bought'
@@ -857,7 +855,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					<MintedComponent item={item} />
 				}
 				{ getStatus(item) == "listed" && <ListingEditComponent item={item}/> }
-				{ getStatus(item) == "sold" && <SoldComponent item={item}/>}
+				{ getStatus(item) == "sold" && <SoldComponent item={item} />}
 			</View>
 		)
 	}
