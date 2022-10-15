@@ -43,35 +43,19 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	
 	const getAllInfo = async() => {
 		setIsLoading(true)
-		const document = [];
 
-		const q = query(collection(db, "NFT"),			
-			where("nft_metadata.original_owner_address", "==", currentWalletAddress.toLowerCase())
+		const document3 = []
+		const q3 = query(collection(db, "NFT"), 
+			where("nft_metadata.owner_history", "array-contains", currentWalletAddress.toLowerCase())
 		)
-		const querySnapshot = await getDocs(q);
-		querySnapshot.forEach((doc) => {
+		const querySnapshot3 = await getDocs(q3)
+		querySnapshot3.forEach((doc) => {
 			const data = doc.data()
-			document.push(data)
+			document3.push(data)
 		})
+		document3.length > 0 && setHasNFT(true)
 
-		document.length > 0 && setHasNFT(true)
-
-		const document2 = [];
-		const q2 = query(collection(db, "NFT"), 
-			where("nft_metadata.current_owner_address", "==", currentWalletAddress.toLowerCase()),
-		)
-		const querySnapshot2 = await getDocs(q2);
-		querySnapshot2.forEach((doc) => {
-			const data = doc.data()
-			document2.push(data)
-		})
-
-		document2.length > 0 && setHasNFT(true)
-
-		const NFTs = new Set(document.map(d => d.nft_metadata.token_id))
-		const arrayMerged = [...document, ...document2.filter(d => !NFTs.has(d.nft_metadata.token_id))]
-
-		setNFT(arrayMerged)
+		setNFT(document3)
 		setIsLoading(false)
 	}
 	
@@ -801,17 +785,20 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 
 	const getStatus = (item: any) => {
 		const marketplace = item.marketplace_metadata
-		const nft = item.nft_metadata
+		const owner_history = item.nft_metadata.owner_history
 		if (marketplace.isListed) { // if is listed
 				return 'listed'
 		} else { // if not listed
-			if (nft.original_owner_address.toLowerCase() == nft.current_owner_address.toLowerCase()) { // Owner is same as minter
-				return 'minted'
-			} else { // Owner and current owner are different, exchange have took place
-				if(nft.current_owner_address.toLowerCase() != currentWalletAddress.toLowerCase()) 
-					return 'sold'
-				else
+			if (owner_history.length == 1) {
+				if (owner_history[0].toLowerCase() == currentWalletAddress.toLowerCase())
+					return 'minted'
+			} else { // array size > 1, exchange have taken place.
+				const latest_owner = owner_history[owner_history.length - 1]
+				if (latest_owner.toLowerCase() == currentWalletAddress.toLowerCase()) {
 					return 'bought'
+				} else {
+					return 'sold'
+				}
 			}
 		}
 	}
@@ -855,10 +842,10 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				<Text style={{fontWeight: 'bold', marginTop: 10,}}>ID</Text>
 				<Text style={{marginTop: 10}}>{item.nft_metadata.token_id}</Text>
 				<Text style={{fontWeight: 'bold', marginTop: 10,}}>Current Owner</Text>
-				<AddressText style={{marginTop: 10}} text={item.nft_metadata.current_owner_address} />
-				{ nftSoldToSomeoneElse(item) && <>
+				<AddressText style={{marginTop: 10}} text={getLatestOwner(item.nft_metadata.owner_history)} />
+				{ nftSoldToSomeoneElse(item.nft_metadata.owner_history) && <>
 					<Text style={{fontWeight: 'bold', marginTop: 10,}}>Original Owner</Text>
-					<AddressText style={{marginTop: 10}} text={item.nft_metadata.original_owner_address} />
+					<AddressText style={{marginTop: 10}} text={getOriginalOwner(item.nft_metadata.owner_history)} />
 				</>
 				}
 				{ getStatus(item) == "bought" && <>
@@ -875,8 +862,16 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		)
 	}
 
-	const nftSoldToSomeoneElse = (url: any) => {
-		return url.nft_metadata.original_owner_address.toLowerCase() != url.nft_metadata.current_owner_address.toLowerCase()
+	const nftSoldToSomeoneElse = (owner_history: Array<String>) => {
+		return owner_history.length > 1
+	}
+
+	const getLatestOwner = (owner_history: Array<String>) => {
+		return owner_history[owner_history.length - 1]
+	}
+
+	const getOriginalOwner = (owner_history: Array<String>) => {
+		return owner_history[0]
 	}
 
 	return (<>

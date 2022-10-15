@@ -2,7 +2,7 @@ import { FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Image, Dimensions
 
 import { db } from '../db-config';
 import { getDocs, collection, query, where, doc, increment, updateDoc } from 'firebase/firestore';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
 import { useFocusEffect } from '@react-navigation/native';
@@ -22,6 +22,7 @@ export default function MarketPlaceScreen({ navigation }) {
   const [NFT, setNFTs] = useState([]);
   const [walletAddress, setWalletAddress] = useState<string>("")
   const [isWalletConnected, setIsWalletConnected] = useState(false)
+  const [ethereumPriceInMyr, setEthereumPriceInMyr] = useState('')
   
   const getAllInfo = useCallback(async() => {
     const q = query(collection(db, "NFT"), where("marketplace_metadata.isListed", "==", true));
@@ -56,7 +57,16 @@ export default function MarketPlaceScreen({ navigation }) {
         } catch (e) {
         }
       };
+      
+      const getPrice = async() => 
+        fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=myr")
+        .then(res => res.json())
+        .then(data => {
+          setEthereumPriceInMyr(data.ethereum.myr)
+        })
+        
       fetchData();
+      getPrice()
     
       return () => {
         isActive = false;
@@ -97,10 +107,10 @@ export default function MarketPlaceScreen({ navigation }) {
             <Text numberOfLines={1} style={{fontWeight: 'bold', color: 'black', fontSize: 20}}>{props.name}</Text>
             <View style={{marginTop: 10, flexDirection: 'row', alignItems: 'center'}}>
               <Text style={{fontSize: 12, color: '#aaaaaa'}}>
-                { isWalletConnected && isUsersOwnNFT(props.owner) ? 
+                { isWalletConnected && isUsersOwnNFT(props.seller) ? 
                 "By You"
                   :
-                "By " + shortenAddress(props.owner)
+                "By " + shortenAddress(props.seller)
                 }
               </Text>
             </View>
@@ -112,19 +122,19 @@ export default function MarketPlaceScreen({ navigation }) {
         </View>
       </TouchableOpacity>
     )
-      
   }
 
   const renderItem = ({ item }) => {
+    const seller = item.nft_metadata.owner_history[item.nft_metadata.owner_history.length - 1]
+
     return(                
         <NFTCardView  
           imgSource={item.nft_metadata.ipfs_image_url}
           imgWidth={item.image_metadata.width}
           imgHeight={item.image_metadata.height}
           name={item.nft_metadata.image_name}
-          owner={item.nft_metadata.current_owner_address}
           price={item.marketplace_metadata.listing_price}
-          seller={item.nft_metadata.current_owner_address}
+          seller={seller}
           navigation={
             () => {
               incrementView(item.nft_metadata.token_id)
@@ -133,7 +143,8 @@ export default function MarketPlaceScreen({ navigation }) {
                 marketplace_metadata: item.marketplace_metadata, 
                 image_metadata: item.image_metadata,
                 wallet_address: walletAddress,
-                is_users_own_nft: isUsersOwnNFT(item.nft_metadata.current_owner_address),
+                is_users_own_nft: isUsersOwnNFT(seller),
+                ethereum_price: ethereumPriceInMyr
               })
             }
           }

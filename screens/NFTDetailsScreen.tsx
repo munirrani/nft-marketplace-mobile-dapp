@@ -1,14 +1,13 @@
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
 import WalletConnectProvider from '@walletconnect/web3-provider';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView, Linking, Alert} from 'react-native';
 import ReadMore from 'react-native-read-more-text';
 import Button from '../components/Button';
 import { INFURA_ID } from '@env';
-import {AutoGrowingTextInput} from 'react-native-autogrow-textinput';
 import { Text, View } from '../components/Themed';
 import { RootStackScreenProps } from '../types';
-import { BigNumber, Contract, providers, utils } from 'ethers';
+import { Contract, providers, utils } from 'ethers';
 import StatusMessage from '../components/StatusMessage';
 import {getStatusBarHeight} from "react-native-status-bar-height";
 import { StatusBar } from 'expo-status-bar';
@@ -24,7 +23,7 @@ const monthNames = ["January", "February", "March", "April", "May", "June",
 
 export default function NFTDetailsScreen({ route, navigation }: RootStackScreenProps<'NFTDetails'>) {
 
-  const { nft_metadata, marketplace_metadata, image_metadata, wallet_address, is_users_own_nft } = route.params;
+  const { nft_metadata, marketplace_metadata, image_metadata, wallet_address, is_users_own_nft, ethereum_price } = route.params;
 
   const [isWalletConnected, setIsWalletConnected] = useState(false);
 
@@ -33,9 +32,8 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   const [doneBuying, setDoneBuying] = useState(false)
   const [buyingTxHash, setBuyingTxHash] = useState("")
 
-  const [priceInMyr, setPriceInMyr] = useState('')
-
   const walletConnector = useWalletConnect();
+  const seller = nft_metadata.owner_history[nft_metadata.owner_history.length - 1]
 
   var signer;
   var gasPrice;
@@ -91,16 +89,6 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
       };
       checkConnection();
 
-      const getPrice = async() => 
-      fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=myr")
-      .then(res => res.json())
-      .then(data => {
-        setPriceInMyr(
-          (parseFloat(data.ethereum.myr) * parseFloat(marketplace_metadata.listing_price)).toFixed(2)
-        )
-      })
-    
-      getPrice()
       return () => {
         isActive = false;
       };
@@ -175,7 +163,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
   );
 
   const Separator = () => 
-  <View style={{marginTop: 10, width:Dimensions.get('window').width - 20, alignSelf:"center", backgroundColor:'#aaaaaa', opacity: .25, height:1,}} />
+    <View style={{marginTop: 10, width:Dimensions.get('window').width - 20, alignSelf:"center", backgroundColor:'#aaaaaa', opacity: .25, height:1,}} />
 
   return (<>
     <StatusBar style="light" />
@@ -209,9 +197,9 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
                     { is_users_own_nft ? 
                       "By You" 
                         : 
-                      "By " + shortenAddress(nft_metadata.current_owner_address)}
+                      "By " + shortenAddress(seller)}
               </Text>
-              <Text style={{color: '#555555'}}>RM {priceInMyr}</Text>
+              <Text style={{color: '#555555'}}>RM {(parseFloat(ethereum_price) * parseFloat(marketplace_metadata.listing_price)).toFixed(2)}</Text>
           </View>
           <View style={{marginTop:10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
               <Text style={{color: "#aaaaaa"}}>Listed on {date.getDate() + " " + monthNames[date.getMonth()] + " "  + date.getUTCFullYear()}</Text>

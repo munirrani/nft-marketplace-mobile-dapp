@@ -331,7 +331,7 @@ export default function MintNFTScreen() {
     return (
 	<SafeAreaView style={{flex: 1, paddingTop: getStatusBarHeight()}}>
 		<View style={{padding:15, width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-			<Text style={{fontSize: 25, fontWeight: 'bold'}}>My Photo</Text>
+			<Text style={{fontSize: 25, fontWeight: 'bold'}}>Mint Photo</Text>
 			<WalletLoginButton customOnPress={()=> {
 				if (isWalletConnected)  {
 					console.log("Wallet connected, so disconnecting wallet")
