@@ -127,7 +127,7 @@ export default function MarketPlaceScreen({ navigation }) {
           imgHeight={item.image_metadata.height}
           name={item.nft_metadata.image_name}
           price={item.marketplace_metadata.listing_price}
-          isUsersOwnNFT={seller.toLowerCase() == walletAddress.toLowerCase()}
+          isUsersOwnNFT={isWalletConnected ? seller.toLowerCase() == walletAddress.toLowerCase() : false}
           seller={seller}
           navigation={
             () => {
@@ -137,7 +137,7 @@ export default function MarketPlaceScreen({ navigation }) {
                 marketplace_metadata: item.marketplace_metadata, 
                 image_metadata: item.image_metadata,
                 wallet_address: walletAddress,
-                is_users_own_nft: seller.toLowerCase() == walletAddress.toLowerCase(),
+                is_users_own_nft: isWalletConnected ? seller.toLowerCase() == walletAddress.toLowerCase() : false,
                 ethereum_price: ethereumPriceInMyr
               })
             }
