@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useRef, useState, } from 'react';
-import { StyleSheet, Image, Dimensions, Alert, Linking, TextInput} from 'react-native';
+import { StyleSheet, Image, Dimensions, Alert, Linking, TextInput, ScrollView, RefreshControl} from 'react-native';
 
 import { db } from '../db-config';
 import { Text, View } from '../components/Themed';
@@ -31,8 +31,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	const [NFT, setNFT] = useState([]);
 	
 	// Wallet
-	const [isLoading, setIsLoading] = useState(false)
+	const [isLoading, setIsLoading] = useState(true)
 	const [hasNFT, setHasNFT] = useState(false)
+	const [refreshing, setRefreshing] = useState(false);
 
 	const { shouldRefresh, ethereumPriceInMyr, setEthereumPriceInMyr, notifyUserTxComplete } = useContext(Web3Context)
 	
@@ -42,7 +43,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	var gasPrice;
 	
 	const getAllInfo = async() => {
-		setIsLoading(true)
 
 		const document = []
 		const q = query(collection(db, "NFT"), 
@@ -54,7 +54,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 			document.push(data)
 		})
 		document.length > 0 && setHasNFT(true)
-
+		
 		setNFT(document)
 		setIsLoading(false)
 	}
@@ -86,23 +86,37 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		gasPrice = await web3Provider.getGasPrice()
 	}
 
-	useEffect(() => {
-		const getPrice = async() => 
-        fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=myr")
-        .then(res => res.json())
-        .then(data => {
-          setEthereumPriceInMyr(data.ethereum.myr)
-      	})
-        
+	const getPrice = async() => 
+	fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=myr")
+	.then(res => res.json())
+	.then(data => {
+	  setEthereumPriceInMyr(data.ethereum.myr)
+	})
+
+	const setInfo = () => {
 		if (walletConnector.connected)  {
 			getAllInfo()
 		} else {
 			setNFT([])
 			setHasNFT(false)
 		}
+	}
 
+	useEffect(() => {
+		setInfo()
 		getPrice()
 	}, [walletConnector, shouldRefresh])
+
+	const wait = (timeout: number) => {
+		return new Promise(resolve => setTimeout(resolve, timeout));
+	}
+
+	const onRefresh = useCallback(() => {
+		setRefreshing(true);
+		setInfo()
+		getPrice()
+		wait(2000).then(() => setRefreshing(false));
+	}, []);
 
 	const promptUser = (message: string, action: any) =>
 		Alert.alert(
@@ -808,7 +822,14 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 					<Text style={{fontSize:21, color: '#BBBBBB', }}>Wallet not Connected</Text>
 				</View>
 					:
-				<View style={{flex: 1, padding: 15}}>
+				<ScrollView style={{flex: 1, padding: 15,}}
+					refreshControl={
+						<RefreshControl 
+							refreshing={refreshing}
+							onRefresh={onRefresh}
+						/>
+					}
+				>
 					{ isLoading ? 
 						<View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
 								<Text style={{fontSize: 21, color: '#BBBBBB'}}>Loading...</Text>
@@ -817,8 +838,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 						hasNFT ?
 							<AccordionList
 								keyboardShouldPersistTaps="always"
-								containerItemStyle = {{shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: {height: 2,width:0},
-									borderRadius: 6, borderWidth: 1.5, borderColor:'#eeeeee'
+								containerItemStyle = {{
+									shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: {height: 2,width:0},
+									borderRadius: 6, borderWidth: 1.5, borderColor:'#eeeeee',
 								}}
 								data={NFT}
 								customTitle={CardMainBody}
@@ -832,7 +854,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 								<Text onPress={()=> navigation.navigate("MarketPlace")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Buy now</Text>
 							</View>
 					}
-				</View>
+				</ScrollView>
 			}
 			</>
 	);

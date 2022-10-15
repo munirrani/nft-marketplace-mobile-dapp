@@ -1,11 +1,12 @@
-import { Dimensions, FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, FlatList, Image, RefreshControl, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useWalletConnect } from '@walletconnect/react-native-dapp';
 import { StatusBar } from 'expo-status-bar';
 import { collection, doc, getDocs, increment, query, updateDoc, where } from 'firebase/firestore';
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { getStatusBarHeight } from "react-native-status-bar-height";
 import { db } from '../db-config';
 import { Web3Context } from '../util/Web3ContextProvider';
+import { useScrollToTop } from '@react-navigation/native';
 
 const shortenAddress = (address: string) => {
   return `${address.slice(0, 6)}...${address.slice(
@@ -19,6 +20,10 @@ export default function MarketPlaceScreen({ navigation }) {
   const walletConnector = useWalletConnect();
   
   const [NFT, setNFTs] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const flatList = useRef();
+  useScrollToTop(flatList)
 
   const { shouldRefresh, ethereumPriceInMyr, setEthereumPriceInMyr } = useContext(Web3Context)
   
@@ -33,19 +38,29 @@ export default function MarketPlaceScreen({ navigation }) {
     setNFTs(document)
   }, [])
 
+  const getPrice = async() => 
+    fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=myr")
+    .then(res => res.json())
+    .then(data => {
+      setEthereumPriceInMyr(data.ethereum.myr)
+  })
+
   useEffect(() => {
-      const getPrice = async() => 
-        fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=myr")
-        .then(res => res.json())
-        .then(data => {
-          setEthereumPriceInMyr(data.ethereum.myr)
-      })
-        
       getAllInfo()
       getPrice()
+  }, [shouldRefresh])
 
+  
+  const wait = (timeout: number) => {
+		return new Promise(resolve => setTimeout(resolve, timeout));
+	}
 
-    }, [shouldRefresh])
+	const onRefresh = useCallback(() => {
+		setRefreshing(true);
+		getAllInfo()
+		getPrice()
+		wait(2000).then(() => setRefreshing(false));
+	}, []);
 
   async function incrementView(tokenId: number) {
     await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
@@ -123,6 +138,13 @@ export default function MarketPlaceScreen({ navigation }) {
       <StatusBar style='dark'/>
         <FlatList 
           data={NFT}
+          ref={flatList}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+            />
+          }
           extraData={walletConnector.connected}
           style={{backgroundColor: 'white'}}
           keyExtractor={(item, index) => item.nft_metadata.token_id}
