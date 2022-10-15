@@ -787,7 +787,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		const owner_history = item.nft_metadata.owner_history
 		const latest_owner = owner_history[owner_history.length - 1]
 		const original_owner = owner_history[0]
-		if (marketplace.isListed && latest_owner == currentWalletAddress.toLowerCase()) { // if is listed
+		if (marketplace.isListed && latest_owner.toLowerCase() == currentWalletAddress.toLowerCase()) { // if is listed
 				return 'listed'
 		} else { // if not listed
 			if (owner_history.length == 1) {
