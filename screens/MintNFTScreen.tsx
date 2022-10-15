@@ -194,16 +194,15 @@ export default function MintNFTScreen() {
       }
     }
 
-	const doChecks = () => {
-		// TODO FIX URL CHECKING
-		function isValidHttpUrl(string: string) {
-			let url;
-			try {
-			  url = new URL(string);
-			} catch (_) {
-			  return false;  
-			}
-			return true
+	const doInputChecks = () => {
+		function isValidURL(str: string) {
+			var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+			'((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
+			'((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+			'(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+			'(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+			'(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+			return !!pattern.test(str);
 		}
 
 		if (!walletConnector.connected) {
@@ -250,7 +249,7 @@ export default function MintNFTScreen() {
 			return false
 		}
 
-		if (!!externalURLText && !isValidHttpUrl(externalURLText)) {
+		if (!!externalURLText && !isValidURL(externalURLText)) {
 			Alert.alert("Error", "In valid URL format",
 			[
 				{
@@ -264,7 +263,6 @@ export default function MintNFTScreen() {
 			);
 			return false
 		}
-
 		return true
 	}
 
@@ -418,9 +416,9 @@ export default function MintNFTScreen() {
 			  	style={{marginVertical: 10, width: '100%', backgroundColor: 'green',}}
                 onPress={() => {
 					promptUser("Confirm mint?", () => {
-						const check = doChecks()
-						setIsStartingMinting(check)
-						check && startMinting()
+						const inputCheck = doInputChecks()
+						setIsStartingMinting(inputCheck)
+						inputCheck && startMinting()
 					})
 				}}
                 title={"Mint Picture"}
