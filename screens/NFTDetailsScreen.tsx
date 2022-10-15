@@ -241,7 +241,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
                       }
                     )
                   } else {
-                    navigation.navigate("MyNFT")
+                    navigation.pop()
                   }
                 }}
               />
