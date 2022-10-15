@@ -43,7 +43,9 @@ export default function MarketPlaceScreen({ navigation }) {
         
       getAllInfo()
       getPrice()
-    }, [walletConnector, shouldRefresh])
+
+
+    }, [shouldRefresh])
 
   async function incrementView(tokenId: number) {
     await updateDoc(doc(db, "NFT", "NFT-"+ tokenId), {
@@ -121,6 +123,7 @@ export default function MarketPlaceScreen({ navigation }) {
       <StatusBar style='dark'/>
         <FlatList 
           data={NFT}
+          extraData={walletConnector.connected}
           style={{backgroundColor: 'white'}}
           keyExtractor={(item, index) => item.nft_metadata.token_id}
           ListHeaderComponent={

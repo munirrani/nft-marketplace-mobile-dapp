@@ -827,7 +827,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 							/>
 								:
 							<View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-								<Text style={{fontSize: 21, color: '#BBBBBB'}}>There are no NFT from you</Text>
+								<Text style={{fontSize: 21, color: '#BBBBBB'}}>There are no pictures</Text>
 								<Text onPress={()=> navigation.navigate("MintNFT")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Mint now</Text>
 								<Text onPress={()=> navigation.navigate("MarketPlace")} style={{marginTop: 16, fontSize: 16, color: "#82bee0"}}>Buy now</Text>
 							</View>
