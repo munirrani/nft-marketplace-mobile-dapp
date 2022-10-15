@@ -1,12 +1,12 @@
-import { FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Image, Dimensions, View, Text, ImageBackground } from 'react-native';
+import { Dimensions, FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { db } from '../db-config';
-import { getDocs, collection, query, where, doc, increment, updateDoc } from 'firebase/firestore';
-import React, { useCallback, useState } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { useWalletConnect } from '@walletconnect/react-native-dapp';
 import { useFocusEffect } from '@react-navigation/native';
-import {getStatusBarHeight} from "react-native-status-bar-height";
+import { useWalletConnect } from '@walletconnect/react-native-dapp';
+import { StatusBar } from 'expo-status-bar';
+import { collection, doc, getDocs, increment, query, updateDoc, where } from 'firebase/firestore';
+import React, { useCallback, useState } from 'react';
+import { getStatusBarHeight } from "react-native-status-bar-height";
+import { db } from '../db-config';
 
 const shortenAddress = (address: string) => {
   return `${address.slice(0, 6)}...${address.slice(
@@ -79,13 +79,6 @@ export default function MarketPlaceScreen({ navigation }) {
       ["marketplace_metadata.listing_views"]: increment(1)
     })
   }
-
-  function isUsersOwnNFT (address: string) { 
-    if (!isWalletConnected) {
-      return false
-    }
-    return address.toLowerCase() == walletAddress.toLowerCase() 
-  }
   
   const NFTCardView = (props: any) => {
     const aspectRatio = props.imgWidth / props.imgHeight
@@ -107,7 +100,7 @@ export default function MarketPlaceScreen({ navigation }) {
             <Text numberOfLines={1} style={{fontWeight: 'bold', color: 'black', fontSize: 20}}>{props.name}</Text>
             <View style={{marginTop: 10, flexDirection: 'row', alignItems: 'center'}}>
               <Text style={{fontSize: 12, color: '#aaaaaa'}}>
-                { isWalletConnected && isUsersOwnNFT(props.seller) ? 
+                { isWalletConnected && props.isUsersOwnNFT ? 
                 "By You"
                   :
                 "By " + shortenAddress(props.seller)
@@ -134,6 +127,7 @@ export default function MarketPlaceScreen({ navigation }) {
           imgHeight={item.image_metadata.height}
           name={item.nft_metadata.image_name}
           price={item.marketplace_metadata.listing_price}
+          isUsersOwnNFT={seller.toLowerCase() == walletAddress.toLowerCase()}
           seller={seller}
           navigation={
             () => {
@@ -143,7 +137,7 @@ export default function MarketPlaceScreen({ navigation }) {
                 marketplace_metadata: item.marketplace_metadata, 
                 image_metadata: item.image_metadata,
                 wallet_address: walletAddress,
-                is_users_own_nft: isUsersOwnNFT(seller),
+                is_users_own_nft: seller.toLowerCase() == walletAddress.toLowerCase(),
                 ethereum_price: ethereumPriceInMyr
               })
             }

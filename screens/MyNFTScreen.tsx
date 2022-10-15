@@ -83,7 +83,6 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 		const web3Provider = new providers.Web3Provider(provider);
 		signer = web3Provider.getSigner();
 		
-		
 		gasPrice = await web3Provider.getGasPrice()
 	}
 
@@ -786,14 +785,15 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	const getStatus = (item: any) => {
 		const marketplace = item.marketplace_metadata
 		const owner_history = item.nft_metadata.owner_history
-		if (marketplace.isListed) { // if is listed
+		const latest_owner = owner_history[owner_history.length - 1]
+		const original_owner = owner_history[0]
+		if (marketplace.isListed && latest_owner == currentWalletAddress.toLowerCase()) { // if is listed
 				return 'listed'
 		} else { // if not listed
 			if (owner_history.length == 1) {
-				if (owner_history[0].toLowerCase() == currentWalletAddress.toLowerCase())
+				if (original_owner.toLowerCase() == currentWalletAddress.toLowerCase())
 					return 'minted'
 			} else { // array size > 1, exchange have taken place.
-				const latest_owner = owner_history[owner_history.length - 1]
 				if (latest_owner.toLowerCase() == currentWalletAddress.toLowerCase()) {
 					return 'bought'
 				} else {
