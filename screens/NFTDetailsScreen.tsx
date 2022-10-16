@@ -88,6 +88,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 		  })
 		  .then((tx:any) => { 
 			  setIsSubmittingTransaction(true)
+        scrollRef.current.scrollToEnd({ animated: true })
 			  return tx.wait()
 	    })
 		  .then((result: any) => {
@@ -145,8 +146,8 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
     <View style={{marginTop: 10, width:Dimensions.get('window').width - 20, alignSelf:"center", backgroundColor:'#aaaaaa', opacity: .25, height:1,}} />
 
   return (<>
-    <StatusBar style="light" />
-    <ScrollView ref={scrollRef} onContentSizeChange={() => scrollRef.current.scrollToEnd()} style={{backgroundColor: 'white'}}>
+    <StatusBar style="light" backgroundColor={'rgba(0,0,0,0.25)'} />
+    <ScrollView ref={scrollRef} style={{backgroundColor: 'white'}}>
       <TouchableOpacity style={{left: 10, top: getStatusBarHeight() + 10, position: 'absolute', zIndex: 2}} onPress={() => navigation.pop()}>
         <Image
             source={require('../assets/images/back-icon.png')}
@@ -216,6 +217,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
                     promptUser("Confirm buy?", 
                       () => {
                         setIsStartingTransaction(true)
+                        scrollRef.current.scrollToEnd({ animated: true })
                         buyNFT()
                       }
                     )
