@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, } from 'react';
+import React, { useState, useEffect, useContext, useRef, } from 'react';
 import { StyleSheet, Image, ScrollView, Alert, TouchableOpacity, ImageBackground, Text, SafeAreaView, Linking } from 'react-native';
 import { View } from '../components/Themed';
 import {AutoGrowingTextInput} from 'react-native-autogrow-textinput';
@@ -33,6 +33,8 @@ export default function MintNFTScreen() {
     const walletConnector = useWalletConnect();
 
 	const { shouldRefresh, setShouldRefresh } = useContext(Web3Context)
+
+	const scrollRef = useRef()
 
 	var ipfsImageURL;
 	var ipfsMetadataURL;
@@ -171,6 +173,7 @@ export default function MintNFTScreen() {
         })
 		.then((tx:any) => {
 			setIsSubmittingTransaction(true)
+			scrollRef.current.scrollToEnd({ animated: true })
 			return tx.wait()
 		})
         .then((result:any) => {
@@ -333,7 +336,7 @@ export default function MintNFTScreen() {
 			<Text style={{fontSize: 25, fontWeight: 'bold'}}>Mint Photo</Text>
 			<WalletLoginButton />
 		</View>
-      <ScrollView style={{flex:1,backgroundColor: "#ffffff"}}>
+      <ScrollView ref={scrollRef} style={{flex:1,backgroundColor: "#ffffff"}}>
         <View style={styles.container}>
           <View style={{ margin:10 }}>
             <View style={{alignItems: 'center'}}>
@@ -419,6 +422,7 @@ export default function MintNFTScreen() {
 						const inputCheck = doInputChecks()
 						setIsStartingMinting(inputCheck)
 						inputCheck && startMinting()
+						inputCheck && scrollRef.current.scrollToEnd({ animated: true })
 					})
 				}}
                 title={"Mint Picture"}
