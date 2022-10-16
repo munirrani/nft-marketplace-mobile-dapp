@@ -2,8 +2,6 @@ import { useWalletConnect } from '@walletconnect/react-native-dapp';
 import React, {useCallback, useContext, useEffect, useState } from 'react';
 import { View, Image } from 'react-native'
 import Button from './Button';
-import { INFURA_ID } from '@env';
-import { Web3ContextProvider } from '../util/Web3ContextProvider';
 
 const shortenAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(

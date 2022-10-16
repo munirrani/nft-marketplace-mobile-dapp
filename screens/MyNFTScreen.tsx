@@ -23,6 +23,10 @@ const NFTSmartContractABI = require('../contracts/abi/PhotoToken.json')
 const MarketplaceSmartContractAddress = '0x1DaEFC61Ef1d94ce351841Bde660F582D7c060Db'
 const MarketplaceSmartContractABI = require('../contracts/abi/NFTMarketPlace.json')
 
+const monthNames = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
 export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>) {
 
 	/* 
@@ -93,9 +97,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	  setEthereumPriceInMyr(data.ethereum.myr)
 	})
 
-	const setInfo = () => {
+	const setInfo = async() => {
 		if (walletConnector.connected)  {
-			getAllInfo()
+			await getAllInfo()
 		} else {
 			setNFT([])
 			setHasNFT(false)
@@ -743,6 +747,16 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 	const CardMainBody = (item: any) => {
 
 		const mintedTime = new Date(item.nft_metadata.minted_date.seconds * 1000)
+
+		const getAMPMTime = (date: Date) => {
+			var hours = date.getHours()
+			var minutes = date.getMinutes()
+			if (minutes < 10) minutes = "0" + minutes
+			const ampm = hours >= 12 ? "PM" : "AM"
+			if(hours > 12) hours = hours - 12 
+			return hours + ":" + minutes + " " + ampm
+		  }
+
 		return (
 			<View key={item.nft_metadata.token_id} style={{flex:1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
 				<Image 
@@ -754,7 +768,9 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 				<View style={{height: 75, flex:4, marginHorizontal: 10}}>
 					<View style={{flex:1, justifyContent:'center'}}>
 						<Text style={{fontWeight: 'bold', fontSize: 14,}}>{item.nft_metadata.image_name}</Text>
-						<Text style={{fontSize:10, position: 'absolute', bottom: 0, color: '#aaaaaa'}}>{mintedTime.toLocaleString()}</Text>
+						<Text style={{fontSize:10, position: 'absolute', bottom: 0, color: '#aaaaaa'}}>
+							{mintedTime.getDate()} {monthNames[mintedTime.getMonth()]} {mintedTime.getUTCFullYear()} {getAMPMTime(mintedTime)}
+						</Text>
 					</View>
 				</View>
 				<View style={{flex: 2, alignItems: "flex-end"}}>

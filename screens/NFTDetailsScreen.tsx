@@ -46,6 +46,15 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
 
   const date = new Date(marketplace_metadata.listing_date.seconds * 1000)
 
+  const getAMPMTime = (date: Date) => {
+    var hours = date.getHours()
+    var minutes = date.getMinutes()
+    if (minutes < 10) minutes = "0" + minutes
+    const ampm = hours >= 12 ? "PM" : "AM"
+    if(hours > 12) hours = hours - 12 
+    return hours + ":" + minutes + " " + ampm
+  }
+
   const setupProvider = async() => {
     const provider = new WalletConnectProvider({
       infuraId: INFURA_ID,
@@ -182,7 +191,7 @@ export default function NFTDetailsScreen({ route, navigation }: RootStackScreenP
               <Text style={{color: '#555555'}}>RM {(parseFloat(ethereum_price) * parseFloat(marketplace_metadata.listing_price)).toFixed(2)}</Text>
           </View>
           <View style={{marginTop:10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-              <Text style={{color: "#aaaaaa"}}>Listed on {date.getDate() + " " + monthNames[date.getMonth()] + " "  + date.getUTCFullYear()}</Text>
+              <Text style={{color: "#aaaaaa"}}>Listed on {date.getDate() + " " + monthNames[date.getMonth()] + " "  + date.getUTCFullYear()} {getAMPMTime(date)}</Text>
               <Text style={{color: "#aaaaaa"}}>{marketplace_metadata.listing_views} Views</Text>
           </View>
           <Separator />
