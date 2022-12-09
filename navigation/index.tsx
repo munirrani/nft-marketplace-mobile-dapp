@@ -16,6 +16,12 @@ import MyNFTScreen from '../screens/MyNFTScreen';
 import { RootStackParamList, RootTabParamList, RootTabScreenProps } from '../types';
 import LinkingConfiguration from './LinkingConfiguration';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import AboutScreen from '../screens/AboutScreen';
+import NewsScreen from '../screens/NewsScreen';
+import FAQScreen from '../screens/FAQScreen';
+import DisclaimerScreen from '../screens/DisclaimerScreen';
+import AboutCompanyScreen from '../screens/AboutCompanyScreen';
+import NewsContentScreen from '../screens/NewsContentScreen';
 
 export default function Navigation({ colorScheme }: { colorScheme: ColorSchemeName }) {
   const MyTheme = {
@@ -50,6 +56,16 @@ function RootNavigator() {
       <Stack.Screen name="NFTDetails" component={NFTDetailsScreen} options={
         ({ navigation }) => ({ headerShown: false })
         } />
+      <Stack.Screen name="NewsContent" component={NewsContentScreen} options={
+        ({ navigation }) => ({ title: "News" })}
+      />
+      <Stack.Screen name="AboutCompany" component={AboutCompanyScreen} options={
+        ({ navigation }) => ({ title: "About Digitalizers" })
+        } />
+      <Stack.Screen name="Disclaimer" component={DisclaimerScreen} options={
+        ({ navigation }) => ({ title: "Disclaimer & Privacy Policy" })
+        } />
+      <Stack.Screen name="FAQ" component={FAQScreen} />
     </Stack.Navigator>
   );
 }
@@ -72,11 +88,12 @@ function BottomTabNavigator() {
         tabBarActiveTintColor: "#000000",
         tabBarPressColor: "#dddddd",
         tabBarShowLabel: false,
+        
       }}>
       <BottomTab.Screen
         name="MarketPlace"
         component={MarketPlaceScreen}
-        options={({ navigation }: RootTabScreenProps<'MarketPlace'>) => ({
+        options={({ route }: RootTabScreenProps<'MarketPlace'>) => ({
           tabBarIcon: ({ color }) => <TabBarIcon name="image"  color={color} />,
           headerShown: false,
         })}
@@ -95,6 +112,22 @@ function BottomTabNavigator() {
         options={{
           tabBarLabel: 'My Photo',
           tabBarIcon: ({ color }) => <TabBarIcon name="bookmark" color={color} />,
+        }}
+      />
+      <BottomTab.Screen
+        name="News"
+        component={NewsScreen}
+        options={{
+          tabBarLabel: "About",
+          tabBarIcon: ({ color }) => <TabBarIcon name="newspaper-o" size={21} style={{marginTop: 1}} color={color} />,
+        }}
+      />
+      <BottomTab.Screen
+        name="About"
+        component={AboutScreen}
+        options={{
+          tabBarLabel: "About",
+          tabBarIcon: ({ color }) => <TabBarIcon name="info-circle" color={color} />,
         }}
       />
     </BottomTab.Navigator>

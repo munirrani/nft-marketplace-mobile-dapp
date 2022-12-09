@@ -856,7 +856,7 @@ export default function MyNFTScreen({ navigation }: RootTabScreenProps<'MyNFT'>)
 								keyboardShouldPersistTaps="always"
 								containerItemStyle = {{
 									shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 2, shadowOffset: {height: 2,width:0},
-									borderRadius: 6, borderWidth: 1.5, borderColor:'#eeeeee',
+									borderRadius: 6, borderWidth: 2, borderColor:'#eeeeee',
 								}}
 								data={NFT}
 								customTitle={CardMainBody}

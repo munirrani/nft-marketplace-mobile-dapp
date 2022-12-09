@@ -148,10 +148,12 @@ export default function MarketPlaceScreen({ navigation }) {
           extraData={walletConnector.connected}
           style={{backgroundColor: 'white'}}
           keyExtractor={(item, index) => item.nft_metadata.token_id}
-          ListHeaderComponent={
+          ListHeaderComponent={<>
               <Text style={{fontSize: 30, fontWeight: 'bold', alignSelf: 'center'}}>Piksel Marketplace</Text>
+              <Text style={{fontSize: 15, marginTop: 5, color:'#aaaaaa', alignSelf: 'center'}}>Where creativity resides</Text>
+          </>
           }
-          ListHeaderComponentStyle={{height: 80, width: Dimensions.get('window').width, marginTop: getStatusBarHeight(), justifyContent: 'center'}}
+          ListHeaderComponentStyle={{paddingVertical: 30, width: Dimensions.get('window').width, marginTop: getStatusBarHeight(), justifyContent: 'center'}}
           numColumns={1}
           renderItem={renderItem}
           contentContainerStyle={{

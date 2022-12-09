@@ -27,6 +27,12 @@ export type RootTabParamList = {
   MarketPlace: undefined;
   MintNFT: undefined;
   MyNFT: undefined;
+  News: undefined;
+  NewsContent: undefined;
+  About: undefined;
+  AboutCompany: undefined;
+  Disclaimer: undefined;
+  FAQ: undefined;
 };
 
 export type RootTabScreenProps<Screen extends keyof RootTabParamList> = CompositeScreenProps<
